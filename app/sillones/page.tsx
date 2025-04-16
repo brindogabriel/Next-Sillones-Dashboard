@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { SofaModelsTable } from "@/components/sofas/sofa-models-table"
 import { SofaModelsTableSkeleton } from "@/components/sofas/sofa-models-table-skeleton"
 import { AddSofaModelButton } from "@/components/sofas/add-sofa-model-button"
+import { unstable_noStore as noStore } from 'next/cache';
 
 function SofaModelsTableWrapper() {
   return (
@@ -12,8 +13,8 @@ function SofaModelsTableWrapper() {
 }
 
 export default function SofaModelsPage() {
-  // Verificar si las variables de entorno están disponibles
- 
+  // Deshabilitar el caché para esta página
+  noStore();
 
   return (
     <div className="space-y-4">
@@ -22,9 +23,7 @@ export default function SofaModelsPage() {
         { <AddSofaModelButton />}
       </div>
 
-      
-        <SofaModelsTableWrapper />
-      
+      <SofaModelsTableWrapper />
     </div>
   )
 }

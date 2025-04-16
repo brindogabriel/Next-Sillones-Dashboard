@@ -1,10 +1,13 @@
+
 import { Suspense } from "react"
 import { MaterialsTable } from "@/components/materials/materials-table"
 import { MaterialsTableSkeleton } from "@/components/materials/materials-table-skeleton"
 import { AddMaterialButton } from "@/components/materials/add-material-button"
+import { unstable_noStore as noStore } from 'next/cache';
 
 export default function MaterialsPage() {
- 
+  // Deshabilitar el caché para esta página
+  noStore();
 
   return (
     <div className="space-y-4">
@@ -13,11 +16,9 @@ export default function MaterialsPage() {
         {<AddMaterialButton />}
       </div>
 
-   
-        <Suspense fallback={<MaterialsTableSkeleton />}>
-          <MaterialsTable />
-        </Suspense>
-      
+      <Suspense fallback={<MaterialsTableSkeleton />}>
+        <MaterialsTable />
+      </Suspense>
     </div>
   )
 }

@@ -1,8 +1,12 @@
 import { supabase } from "@/lib/supabase";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
+import { unstable_noStore as noStore } from 'next/cache';
 
 export async function SofaModelsTable() {
+  // Deshabilitar el caché para este componente
+  noStore();
+  
   try {
     const { data: sofaModels, error } = await supabase
       .from("sofa_models")
