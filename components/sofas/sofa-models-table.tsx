@@ -2,11 +2,12 @@ import { supabase } from "@/lib/supabase";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
 import { unstable_noStore as noStore } from 'next/cache';
+import { Input } from "@/components/ui/input";
 
 export async function SofaModelsTable() {
   // Deshabilitar el caché para este componente
   noStore();
-  
+
   try {
     const { data: sofaModels, error } = await supabase
       .from("sofa_models")
@@ -18,12 +19,22 @@ export async function SofaModelsTable() {
     }
 
     return (
-      <div className="rounded-md border">
-        <DataTable
-          columns={columns}
-          data={sofaModels || []}
-          filterColumn="name"
-        />
+      <div className="space-y-4">
+        <div className="flex items-center py-4">
+          <Input
+            placeholder="Filtrar sillones..."
+            className="max-w-sm"
+            id="filter-sofas"
+          />
+        </div>
+        <div className="rounded-md border">
+          <DataTable
+            columns={columns}
+            data={sofaModels || []}
+            filterColumn="name"
+            filterId="filter-sofas"
+          />
+        </div>
       </div>
     );
   } catch (error) {

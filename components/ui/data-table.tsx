@@ -14,16 +14,43 @@ import {
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  filterColumn?: string
+  filterId?: string
 }
 
-export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue>({
+  columns,
+  data,
+  filterColumn,
+  filterId = "filter-materials" // valor por defecto para mantener compatibilidad
+}: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+
+  // Efecto para manejar el filtrado cuando cambia el input
+  useEffect(() => {
+    const filterInput = document.getElementById(filterId) as HTMLInputElement
+    if (filterInput && filterColumn) {
+      const handleFilter = (e: Event) => {
+        const target = e.target as HTMLInputElement
+        setColumnFilters([
+          {
+            id: filterColumn,
+            value: target.value,
+          },
+        ])
+      }
+      filterInput.addEventListener("input", handleFilter)
+      return () => {
+        filterInput.removeEventListener("input", handleFilter)
+      }
+    }
+  }, [filterColumn, filterId])
 
   const table = useReactTable({
     data,

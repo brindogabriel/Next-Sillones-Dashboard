@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import ExcelJS from "exceljs";
 
 export function ExportReportButton() {
@@ -19,7 +19,6 @@ export function ExportReportButton() {
         .from("orders")
         .select(
           `
-          id,
           customer_name,
           customer_phone,
           customer_email,
@@ -39,7 +38,7 @@ export function ExportReportButton() {
 
       // Add headers with styling
       worksheet.addRow([
-        "ID",
+
         "Cliente",
         "Teléfono",
         "Email",
@@ -68,7 +67,7 @@ export function ExportReportButton() {
       // Add data rows
       orders.forEach((order) => {
         worksheet.addRow([
-          order.id,
+
           order.customer_name,
           order.customer_phone || "",
           order.customer_email || "",

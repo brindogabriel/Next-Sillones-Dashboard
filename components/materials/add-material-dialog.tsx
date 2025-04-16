@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
 
 const formSchema = z.object({
@@ -57,7 +57,9 @@ export function AddMaterialDialog({ open, onOpenChange }: AddMaterialDialogProps
     setIsLoading(true)
 
     try {
-      const { error } = await supabase().from("materials").insert([values])
+      const { error } = await supabase
+        .from("materials")
+        .insert([values])
 
       if (error) throw error
 
@@ -73,7 +75,9 @@ export function AddMaterialDialog({ open, onOpenChange }: AddMaterialDialogProps
       console.error("Error adding material:", error)
       toast({
         title: "Error",
-        description: "Hubo un error al agregar el material.",
+        description: error instanceof Error 
+          ? error.message 
+          : "Hubo un error al agregar el material. Por favor, inténtalo de nuevo.",
         variant: "destructive",
       })
     } finally {

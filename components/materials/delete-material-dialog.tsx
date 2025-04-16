@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
 import type { Material } from "./columns"
 
@@ -29,7 +29,10 @@ export function DeleteMaterialDialog({ material, open, onOpenChange }: DeleteMat
     setIsLoading(true)
 
     try {
-      const { error } = await supabase().from("materials").delete().eq("id", material.id)
+      const { error } = await supabase
+        .from("materials")
+        .delete()
+        .eq("id", material.id)
 
       if (error) throw error
 

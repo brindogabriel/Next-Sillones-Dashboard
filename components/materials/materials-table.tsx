@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase"
 import { DataTable } from "@/components/ui/data-table"
 import { columns } from "./columns"
 import { unstable_noStore as noStore } from 'next/cache'
+import { Input } from "@/components/ui/input"
 
 export async function MaterialsTable() {
   // Deshabilitar el caché para este componente
@@ -18,11 +19,22 @@ export async function MaterialsTable() {
     }
 
     return (
-      <div className="rounded-md border">
-        <DataTable
-          columns={columns}
-          data={materials || []}
-        />
+      <div className="space-y-4">
+        <div className="flex items-center py-4">
+          <Input
+            placeholder="Filtrar materiales..."
+            className="max-w-sm"
+            id="filter-materials"
+          />
+        </div>
+        <div className="rounded-md border">
+          <DataTable
+            columns={columns}
+            data={materials || []}
+            filterColumn="name"
+            filterId="filter-materials"
+          />
+        </div>
       </div>
     )
   } catch (error) {

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
 import type { Material } from "./columns"
 
@@ -69,7 +69,7 @@ export function EditMaterialDialog({ material, open, onOpenChange }: EditMateria
     setIsLoading(true)
 
     try {
-      const { error } = await supabase().from("materials").update(values).eq("id", material.id)
+      const { error } = await supabase.from("materials").update(values).eq("id", material.id)
 
       if (error) throw error
 
