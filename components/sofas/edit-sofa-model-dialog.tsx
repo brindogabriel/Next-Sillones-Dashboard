@@ -55,7 +55,9 @@ const formSchema = z.object({
   profit_percentage: z.coerce.number().min(0, {
     message: "El porcentaje de ganancia debe ser un número positivo.",
   }),
-  materials: z.array(materialItemSchema),
+  materials: z.array(materialItemSchema).nonempty({
+    message: "Debe haber al menos un material",
+  }),
 });
 
 interface EditSofaModelDialogProps {
@@ -86,7 +88,7 @@ export function EditSofaModelDialog({
       name: sofaModel.name,
       description: sofaModel.description || "",
       profit_percentage: sofaModel.profit_percentage,
-      materials: [],
+      materials: [{ material_id: "", quantity: 1 }],
     },
   });
 
@@ -102,21 +104,21 @@ export function EditSofaModelDialog({
     }
   }, [open, sofaModel.id]);
 
-  // Update form values when sofaModel changes
+  // Update form values when sofaModel or materials change
   useEffect(() => {
-    form.setValue("name", sofaModel.name);
-    form.setValue("description", sofaModel.description || "");
-    form.setValue("profit_percentage", sofaModel.profit_percentage);
-  }, [sofaModel, form]);
-
-  // Update materials field when sofaMaterials changes
-  useEffect(() => {
-    if (sofaMaterials.length > 0) {
-      replace(sofaMaterials);
-    } else if (fields.length === 0) {
-      append({ material_id: "", quantity: 1 });
+    if (open && !form.formState.isDirty) {
+      // Solo resetear si el formulario no ha sido modificado
+      form.reset({
+        name: sofaModel.name,
+        description: sofaModel.description || "",
+        profit_percentage: sofaModel.profit_percentage,
+        materials:
+          sofaMaterials.length > 0
+            ? sofaMaterials
+            : [{ material_id: "", quantity: 1 }],
+      });
     }
-  }, [sofaMaterials, append, replace, fields.length]);
+  }, [sofaModel, sofaMaterials, form, open]);
 
   async function fetchMaterials() {
     try {
@@ -145,6 +147,7 @@ export function EditSofaModelDialog({
         .eq("sofa_id", sofaModel.id);
 
       if (error) throw error;
+      console.log("Materiales del sillón cargados:", data);
       setSofaMaterials(data || []);
     } catch (error) {
       console.error("Error fetching sofa materials:", error);
@@ -224,17 +227,25 @@ export function EditSofaModelDialog({
 
       // Agregar nuevos materiales
       if (materialsToAdd.length > 0) {
-        const newMaterials = materialsToAdd.map((item) => ({
-          sofa_id: sofaModel.id,
-          material_id: item.material_id,
-          quantity: item.quantity,
-        }));
+        const newMaterials = materialsToAdd
+          .filter((item) => item.material_id && item.quantity > 0)
+          .map((item) => ({
+            sofa_id: sofaModel.id,
+            material_id: item.material_id,
+            quantity: item.quantity,
+          }));
 
-        const { error: addError } = await supabase
-          .from("sofa_materials")
-          .insert(newMaterials);
+        if (newMaterials.length > 0) {
+          console.log("Agregando nuevos materiales:", newMaterials);
+          const { error: addError } = await supabase
+            .from("sofa_materials")
+            .insert(newMaterials);
 
-        if (addError) throw addError;
+          if (addError) {
+            console.error("Error al agregar materiales:", addError);
+            throw addError;
+          }
+        }
       }
 
       toast({
@@ -257,7 +268,16 @@ export function EditSofaModelDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        // Reiniciar el estado cuando se cierra el diálogo
+        if (!isOpen) {
+          form.reset();
+        }
+        onOpenChange(isOpen);
+      }}
+    >
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Editar Modelo de Sillón</DialogTitle>
@@ -384,13 +404,16 @@ export function EditSofaModelDialog({
                   ))}
                   <Button
                     type="button"
-                    variant="outline"
-                    onClick={() =>
+                    variant="secondary"
+                    className="mt-2"
+                    onClick={() => {
+                      // Asegurarse de que siempre se puede agregar un nuevo material
+                      console.log("Agregando nuevo material al formulario");
                       append({
                         material_id: "",
                         quantity: 1,
-                      })
-                    }
+                      });
+                    }}
                   >
                     Agregar Material
                   </Button>
