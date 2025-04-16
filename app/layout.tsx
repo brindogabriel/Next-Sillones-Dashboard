@@ -13,8 +13,7 @@ export const metadata: Metadata = {
   title: "Sillones Fábrica Dashboard",
   description: "Dashboard para gestión de fábrica de sillones",
   manifest: "/manifest.json",
-  themeColor: "#000000",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
