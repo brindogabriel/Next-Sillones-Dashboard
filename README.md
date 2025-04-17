@@ -9,7 +9,10 @@ Panel de administración para gestión de sillones, materiales y pedidos. Desarr
 - 📊 Dashboard con vista general de materiales, modelos y pedidos
 - 🛋️ Gestión de modelos de sillones
 - 🧵 Inventario de materiales
-- 📝 Control de pedidos
+- �� Control de pedidos con cálculo de costos
+  - Precio de productos
+  - Costos de envío
+  - Cálculo automático de total
 - 📊 Generación de reportes
 
 ## Tecnologías
@@ -65,7 +68,3 @@ El dashboard principal muestra un resumen de los elementos registrados en el sis
 3. Commit de tus cambios (`git commit -m 'Añade nueva característica'`)
 4. Push a la rama (`git push origin feature/nueva-caracteristica`)
 5. Abre un Pull Request
-
-## Licencia
-
-Este proyecto está bajo licencia MIT.

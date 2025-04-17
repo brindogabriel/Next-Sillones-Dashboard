@@ -205,6 +205,19 @@ export function ViewOrderDetailsDialog({
                   : "No especificado"}
               </p>
             </div>
+            {order.shipping_cost !== null && order.shipping_cost > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  Costo de Envío
+                </h3>
+                <p className="text-base">
+                  {new Intl.NumberFormat("es-AR", {
+                    style: "currency",
+                    currency: "ARS",
+                  }).format(order.shipping_cost)}
+                </p>
+              </div>
+            )}
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">
                 Total

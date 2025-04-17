@@ -72,6 +72,12 @@ const formSchema = z.object({
   payment_method: z.string({
     required_error: "Selecciona un método de pago",
   }),
+  shipping_cost: z.coerce
+    .number()
+    .min(0, {
+      message: "El costo de envío debe ser un número positivo o cero",
+    })
+    .default(0),
   notes: z.string().optional(),
   items: z.array(orderItemSchema).min(1, {
     message: "Debes agregar al menos un modelo de sillón al pedido",
@@ -99,6 +105,7 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
       status: "pending",
       delivery_date: "",
       payment_method: "efectivo",
+      shipping_cost: 0,
       notes: "",
       items: [
         {
@@ -162,10 +169,9 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
 
     try {
       // Calculate total amount
-      const totalAmount = values.items.reduce(
-        (sum, item) => sum + item.total_price,
-        0
-      );
+      const totalAmount =
+        values.items.reduce((sum, item) => sum + item.total_price, 0) +
+        values.shipping_cost;
 
       // Insert order
       const { data: orderData, error: orderError } = await supabase
@@ -179,6 +185,7 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
           status: values.status,
           delivery_date: values.delivery_date || null,
           payment_method: values.payment_method,
+          shipping_cost: values.shipping_cost,
           total_amount: totalAmount,
           notes: values.notes || null,
         })
@@ -395,6 +402,20 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
 
               <FormField
                 control={form.control}
+                name="shipping_cost"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Costo de Envío</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
@@ -552,19 +573,52 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                 </div>
               </div>
 
-              <div className="text-right mt-4">
-                <h3 className="text-lg font-medium">Precio Total del Pedido</h3>
-                <p className="text-xl font-bold">
-                  {new Intl.NumberFormat("es-AR", {
-                    style: "currency",
-                    currency: "ARS",
-                    minimumFractionDigits: 2,
-                  }).format(
-                    form
-                      .watch("items")
-                      .reduce((sum, item) => sum + item.total_price, 0)
-                  )}
-                </p>
+              <div className="text-right mt-4 space-y-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Subtotal Productos:
+                  </p>
+                  <p className="text-base font-medium">
+                    {new Intl.NumberFormat("es-AR", {
+                      style: "currency",
+                      currency: "ARS",
+                      minimumFractionDigits: 2,
+                    }).format(
+                      form
+                        .watch("items")
+                        .reduce((sum, item) => sum + item.total_price, 0)
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Costo de Envío:
+                  </p>
+                  <p className="text-base font-medium">
+                    {new Intl.NumberFormat("es-AR", {
+                      style: "currency",
+                      currency: "ARS",
+                      minimumFractionDigits: 2,
+                    }).format(form.watch("shipping_cost") || 0)}
+                  </p>
+                </div>
+                <div className="border-t pt-2 mt-2">
+                  <h3 className="text-lg font-medium">
+                    Precio Total del Pedido
+                  </h3>
+                  <p className="text-xl font-bold">
+                    {new Intl.NumberFormat("es-AR", {
+                      style: "currency",
+                      currency: "ARS",
+                      minimumFractionDigits: 2,
+                    }).format(
+                      form
+                        .watch("items")
+                        .reduce((sum, item) => sum + item.total_price, 0) +
+                        (form.watch("shipping_cost") || 0)
+                    )}
+                  </p>
+                </div>
               </div>
 
               <DialogFooter>

@@ -27,6 +27,7 @@ export type Order = {
   status: string;
   delivery_date: string | null;
   total_amount: number;
+  shipping_cost: number | null;
   payment_method: string | null;
   notes: string | null;
   created_at: string;
