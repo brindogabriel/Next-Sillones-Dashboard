@@ -9,7 +9,7 @@ Panel de administración para gestión de sillones, materiales y pedidos. Desarr
 - 📊 Dashboard con vista general de materiales, modelos y pedidos
 - 🛋️ Gestión de modelos de sillones
 - 🧵 Inventario de materiales
-- �� Control de pedidos con cálculo de costos
+- 📦 Control de pedidos con cálculo de costos
   - Precio de productos
   - Costos de envío
   - Cálculo automático de total
