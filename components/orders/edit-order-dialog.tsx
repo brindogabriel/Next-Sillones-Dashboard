@@ -47,8 +47,14 @@ const formSchema = z.object({
     })
     .optional()
     .or(z.literal("")),
+  customer_location: z.string().optional().or(z.literal("")),
+  customer_address: z.string().optional().or(z.literal("")),
   status: z.string({
     required_error: "Selecciona un estado para el pedido",
+  }),
+  delivery_date: z.string().optional().or(z.literal("")),
+  payment_method: z.string({
+    required_error: "Selecciona un método de pago",
   }),
   notes: z.string().optional(),
 });
@@ -73,7 +79,11 @@ export function EditOrderDialog({
       customer_name: order.customer_name,
       customer_phone: order.customer_phone || "",
       customer_email: order.customer_email || "",
+      customer_location: order.customer_location || "",
+      customer_address: order.customer_address || "",
       status: order.status,
+      delivery_date: order.delivery_date || "",
+      payment_method: order.payment_method || "efectivo",
       notes: order.notes || "",
     },
   });
@@ -84,7 +94,11 @@ export function EditOrderDialog({
       customer_name: order.customer_name,
       customer_phone: order.customer_phone || "",
       customer_email: order.customer_email || "",
+      customer_location: order.customer_location || "",
+      customer_address: order.customer_address || "",
       status: order.status,
+      delivery_date: order.delivery_date || "",
+      payment_method: order.payment_method || "efectivo",
       notes: order.notes || "",
     });
   }, [order, form]);
@@ -99,7 +113,11 @@ export function EditOrderDialog({
           customer_name: values.customer_name,
           customer_phone: values.customer_phone || null,
           customer_email: values.customer_email || null,
+          customer_location: values.customer_location || null,
+          customer_address: values.customer_address || null,
           status: values.status,
+          delivery_date: values.delivery_date || null,
+          payment_method: values.payment_method,
           notes: values.notes || null,
         })
         .eq("id", order.id);
@@ -178,6 +196,32 @@ export function EditOrderDialog({
               />
               <FormField
                 control={form.control}
+                name="customer_location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Localidad</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="customer_address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dirección</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="status"
                 render={({ field }) => (
                   <FormItem>
@@ -195,7 +239,49 @@ export function EditOrderDialog({
                         <SelectItem value="pending">Pendiente</SelectItem>
                         <SelectItem value="in_progress">En Progreso</SelectItem>
                         <SelectItem value="completed">Completado</SelectItem>
+                        <SelectItem value="delivered">Entregado</SelectItem>
+                        <SelectItem value="stock">En Stock</SelectItem>
                         <SelectItem value="cancelled">Cancelado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="delivery_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fecha Máxima de Entrega</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="payment_method"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Método de Pago</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un método de pago" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="efectivo">Efectivo</SelectItem>
+                        <SelectItem value="transferencia">
+                          Transferencia
+                        </SelectItem>
+                        <SelectItem value="tarjeta">Tarjeta</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

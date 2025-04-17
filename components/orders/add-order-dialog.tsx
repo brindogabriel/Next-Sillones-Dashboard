@@ -63,8 +63,14 @@ const formSchema = z.object({
     })
     .optional()
     .or(z.literal("")),
+  customer_location: z.string().optional().or(z.literal("")),
+  customer_address: z.string().optional().or(z.literal("")),
   status: z.string({
     required_error: "Selecciona un estado para el pedido",
+  }),
+  delivery_date: z.string().optional().or(z.literal("")),
+  payment_method: z.string({
+    required_error: "Selecciona un método de pago",
   }),
   notes: z.string().optional(),
   items: z.array(orderItemSchema).min(1, {
@@ -88,7 +94,11 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
       customer_name: "",
       customer_phone: "",
       customer_email: "",
+      customer_location: "",
+      customer_address: "",
       status: "pending",
+      delivery_date: "",
+      payment_method: "efectivo",
       notes: "",
       items: [
         {
@@ -164,7 +174,11 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
           customer_name: values.customer_name,
           customer_phone: values.customer_phone || null,
           customer_email: values.customer_email || null,
+          customer_location: values.customer_location || null,
+          customer_address: values.customer_address || null,
           status: values.status,
+          delivery_date: values.delivery_date || null,
+          payment_method: values.payment_method,
           total_amount: totalAmount,
           notes: values.notes || null,
         })
@@ -270,6 +284,40 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                 />
                 <FormField
                   control={form.control}
+                  name="customer_location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Localidad</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Buenos Aires"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="customer_address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Dirección</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Av. Corrientes 1234"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="status"
                   render={({ field }) => (
                     <FormItem>
@@ -289,6 +337,8 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                             En Progreso
                           </SelectItem>
                           <SelectItem value="completed">Completado</SelectItem>
+                          <SelectItem value="delivered">Entregado</SelectItem>
+                          <SelectItem value="stock">En Stock</SelectItem>
                           <SelectItem value="cancelled">Cancelado</SelectItem>
                         </SelectContent>
                       </Select>
@@ -296,7 +346,52 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="delivery_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha Máxima de Entrega</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
+
+              <FormField
+                control={form.control}
+                name="payment_method"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Método de Pago</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un método de pago" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="efectivo">Efectivo</SelectItem>
+                        <SelectItem value="transferencia">
+                          Transferencia
+                        </SelectItem>
+                        <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

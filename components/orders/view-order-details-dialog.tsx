@@ -53,32 +53,41 @@ export function ViewOrderDetailsDialog({
   async function fetchOrderItems() {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Primero traemos los items del pedido
+      const { data: orderItemsData, error: orderItemsError } = await supabase
         .from("order_items")
-        .select(
-          `
-          id,
-          quantity,
-          unit_price,
-          total_price,
-          sofa_models (
-            name
-          )
-        `
-        )
+        .select("id, quantity, unit_price, total_price, sofa_id")
         .eq("order_id", order.id);
 
-      if (error) throw error;
+      if (orderItemsError) throw orderItemsError;
 
-      const formattedData = data.map((item) => ({
-        id: item.id,
-        sofa_name: item.sofa_models.name,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
-      }));
+      // Para cada ítem, obtenemos el nombre del sofá
+      const itemsWithSofaNames = await Promise.all(
+        orderItemsData.map(async (item) => {
+          let sofaName = "Sin nombre";
 
-      setOrderItems(formattedData);
+          // Obtenemos el nombre del sofá
+          const { data: sofaData, error: sofaError } = await supabase
+            .from("sofa_models")
+            .select("name")
+            .eq("id", item.sofa_id)
+            .single();
+
+          if (!sofaError && sofaData) {
+            sofaName = sofaData.name;
+          }
+
+          return {
+            id: item.id,
+            sofa_name: sofaName,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+          };
+        })
+      );
+
+      setOrderItems(itemsWithSofaNames);
     } catch (error) {
       console.error("Error fetching order items:", error);
     } finally {
@@ -146,12 +155,54 @@ export function ViewOrderDetailsDialog({
                 <p className="text-base">{order.customer_email}</p>
               </div>
             )}
+            {order.customer_location && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  Localidad
+                </h3>
+                <p className="text-base">{order.customer_location}</p>
+              </div>
+            )}
+            {order.customer_address && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  Dirección
+                </h3>
+                <p className="text-base">{order.customer_address}</p>
+              </div>
+            )}
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">
-                Fecha
+                Fecha de Creación
               </h3>
               <p className="text-base">
                 {new Date(order.created_at).toLocaleDateString("es-AR")}
+              </p>
+            </div>
+            {order.delivery_date && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  Fecha Máxima de Entrega
+                </h3>
+                <p className="text-base">
+                  {new Date(order.delivery_date).toLocaleDateString("es-AR")}
+                </p>
+              </div>
+            )}
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">
+                Método de Pago
+              </h3>
+              <p className="text-base">
+                {order.payment_method
+                  ? order.payment_method === "efectivo"
+                    ? "Efectivo"
+                    : order.payment_method === "transferencia"
+                    ? "Transferencia"
+                    : order.payment_method === "tarjeta"
+                    ? "Tarjeta"
+                    : order.payment_method
+                  : "No especificado"}
               </p>
             </div>
             <div>
