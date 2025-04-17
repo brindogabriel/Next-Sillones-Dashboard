@@ -194,150 +194,148 @@ export function AddSofaModelDialog({
             Ingresa los detalles del nuevo modelo de sillón.
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto pr-1">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nombre</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Sillón Esquinero" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="profit_percentage"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Porcentaje de Ganancia (%)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
-                name="description"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Descripción</FormLabel>
+                    <FormLabel>Nombre</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Descripción del modelo de sillón"
-                        {...field}
-                        value={field.value || ""}
-                      />
+                      <Input placeholder="Sillón Esquinero" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <FormField
+                control={form.control}
+                name="profit_percentage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Porcentaje de Ganancia (%)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-              <div>
-                <h3 className="text-lg font-medium mb-2">Materiales</h3>
-                <div className="space-y-4">
-                  {fields.map((field, index) => (
-                    <div
-                      key={field.id}
-                      className="flex flex-col gap-4 p-4 border rounded-md"
-                    >
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <FormField
-                          control={form.control}
-                          name={`materials.${index}.material_id`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Material</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona un material" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {availableMaterials.map((material) => (
-                                    <SelectItem
-                                      key={material.id}
-                                      value={material.id}
-                                    >
-                                      {material.name} ({material.type})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`materials.${index}.quantity`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Cantidad</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0.01"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <div className="flex justify-end">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={() => remove(index)}
-                          disabled={fields.length === 1}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() =>
-                      append({
-                        material_id: "",
-                        quantity: 1,
-                      })
-                    }
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descripción</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Descripción del modelo de sillón"
+                      {...field}
+                      value={field.value || ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div>
+              <h3 className="text-lg font-medium mb-2">Materiales</h3>
+              <div className="space-y-4">
+                {fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="flex flex-col gap-4 p-4 border rounded-md"
                   >
-                    Agregar Material
-                  </Button>
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Guardando..." : "Guardar"}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name={`materials.${index}.material_id`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Material</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona un material" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {availableMaterials.map((material) => (
+                                  <SelectItem
+                                    key={material.id}
+                                    value={material.id}
+                                  >
+                                    {material.name} ({material.type})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`materials.${index}.quantity`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cantidad</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => remove(index)}
+                        disabled={fields.length === 1}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    append({
+                      material_id: "",
+                      quantity: 1,
+                    })
+                  }
+                >
+                  Agregar Material
                 </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Guardando..." : "Guardar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

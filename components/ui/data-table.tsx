@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   type ColumnDef,
@@ -10,47 +10,54 @@ import {
   getSortedRowModel,
   type ColumnFiltersState,
   getFilteredRowModel,
-} from "@tanstack/react-table"
+} from "@tanstack/react-table";
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { useState, useEffect } from "react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 
 interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
-  filterColumn?: string
-  filterId?: string
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
+  filterColumn?: string;
+  filterId?: string;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   filterColumn,
-  filterId = "filter-materials" // valor por defecto para mantener compatibilidad
+  filterId = "filter-materials", // valor por defecto para mantener compatibilidad
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
   // Efecto para manejar el filtrado cuando cambia el input
   useEffect(() => {
-    const filterInput = document.getElementById(filterId) as HTMLInputElement
+    const filterInput = document.getElementById(filterId) as HTMLInputElement;
     if (filterInput && filterColumn) {
       const handleFilter = (e: Event) => {
-        const target = e.target as HTMLInputElement
+        const target = e.target as HTMLInputElement;
         setColumnFilters([
           {
             id: filterColumn,
             value: target.value,
           },
-        ])
-      }
-      filterInput.addEventListener("input", handleFilter)
+        ]);
+      };
+      filterInput.addEventListener("input", handleFilter);
       return () => {
-        filterInput.removeEventListener("input", handleFilter)
-      }
+        filterInput.removeEventListener("input", handleFilter);
+      };
     }
-  }, [filterColumn, filterId])
+  }, [filterColumn, filterId]);
 
   const table = useReactTable({
     data,
@@ -65,7 +72,7 @@ export function DataTable<TData, TValue>({
       sorting,
       columnFilters,
     },
-  })
+  });
 
   return (
     <div>
@@ -77,9 +84,14 @@ export function DataTable<TData, TValue>({
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead key={header.id}>
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
-                  )
+                  );
                 })}
               </TableRow>
             ))}
@@ -87,15 +99,26 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   No hay resultados.
                 </TableCell>
               </TableRow>
@@ -103,14 +126,25 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+      <div className="flex items-center justify-end py-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
           Anterior
         </Button>
-        <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+          className="ml-2"
+        >
           Siguiente
         </Button>
       </div>
     </div>
-  )
+  );
 }

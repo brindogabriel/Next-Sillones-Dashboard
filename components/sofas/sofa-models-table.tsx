@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
-import { unstable_noStore as noStore } from 'next/cache';
+import { unstable_noStore as noStore } from "next/cache";
 import { Input } from "@/components/ui/input";
 
 export async function SofaModelsTable() {
@@ -19,7 +19,7 @@ export async function SofaModelsTable() {
     }
 
     return (
-      <div className="space-y-4">
+      <div>
         <div className="flex items-center py-4">
           <Input
             placeholder="Filtrar sillones..."
@@ -27,14 +27,12 @@ export async function SofaModelsTable() {
             id="filter-sofas"
           />
         </div>
-        <div className="rounded-md border">
-          <DataTable
-            columns={columns}
-            data={sofaModels || []}
-            filterColumn="name"
-            filterId="filter-sofas"
-          />
-        </div>
+        <DataTable
+          columns={columns}
+          data={sofaModels || []}
+          filterColumn="name"
+          filterId="filter-sofas"
+        />
       </div>
     );
   } catch (error) {
