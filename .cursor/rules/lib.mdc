@@ -1,0 +1,14 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Carpeta [lib](mdc:lib)
+
+Contiene utilidades y configuraciones compartidas en el proyecto.
+
+- [lib/supabase.ts](mdc:lib/supabase.ts): Configuración y cliente de Supabase para la conexión con la base de datos.
+- [lib/utils.ts](mdc:lib/utils.ts): Funciones utilitarias generales usadas en diferentes partes del sistema.
+
+Consulta esta carpeta para lógica compartida o configuración global.
+

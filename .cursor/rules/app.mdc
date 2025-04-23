@@ -1,0 +1,17 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Carpeta [app](mdc:app)
+
+Contiene la aplicación principal de Next.js. Organiza las páginas y rutas principales del dashboard.
+
+## Subdirectorios relevantes
+- [app/pedidos](mdc:app/pedidos): Gestión y visualización de pedidos, incluyendo creación, edición y listado.
+- [app/reportes](mdc:app/reportes): Generación y visualización de reportes del sistema.
+- [app/sillones](mdc:app/sillones): Administración de modelos de sillones.
+- [app/materiales](mdc:app/materiales): Gestión de inventario de materiales.
+
+Incluye archivos globales como [globals.css](mdc:app/globals.css) para estilos y [layout.tsx](mdc:app/layout.tsx) para la estructura base de la aplicación.
+

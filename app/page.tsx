@@ -18,7 +18,6 @@ export default async function DashboardPage() {
   let error = null;
 
   try {
-    // Get counts from database
     const [materialsResult, sofaModelsResult, ordersResult] = await Promise.all(
       [
         supabase.from("materials").select("*", { count: "exact", head: true }),

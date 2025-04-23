@@ -1,0 +1,18 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Carpeta [components](mdc:components)
+
+Contiene componentes reutilizables de la interfaz de usuario para el dashboard. Estos componentes pueden ser usados en diferentes páginas y módulos del sistema.
+
+Incluye subcarpetas especializadas como:
+- [components/ui](mdc:components/ui): Componentes de interfaz genéricos o de bajo nivel.
+- [components/orders](mdc:components/orders): Componentes relacionados con la gestión de pedidos.
+- [components/reports](mdc:components/reports): Componentes para reportes.
+- [components/sofas](mdc:components/sofas): Componentes para modelos de sillones.
+- [components/materials](mdc:components/materials): Componentes para materiales.
+
+Consulta esta carpeta para reutilizar o modificar elementos visuales del sistema.
+

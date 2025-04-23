@@ -1,0 +1,18 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Guía de Estructura del Proyecto
+
+Este proyecto es un panel de administración para la gestión de sillones, materiales y pedidos, desarrollado con Next.js y Supabase.
+
+## Estructura principal
+
+- La carpeta [app](mdc:app) contiene la aplicación Next.js, incluyendo subdirectorios para la gestión de pedidos ([app/pedidos](mdc:app/pedidos)), reportes ([app/reportes](mdc:app/reportes)), modelos de sillones ([app/sillones](mdc:app/sillones)) y materiales ([app/materiales](mdc:app/materiales)).
+- La carpeta [components](mdc:components) contiene componentes reutilizables de la interfaz de usuario.
+- La carpeta [lib](mdc:lib) incluye utilidades y configuración, como la conexión a Supabase ([lib/supabase.ts](mdc:lib/supabase.ts)).
+- La carpeta [public](mdc:public) almacena archivos estáticos.
+
+Consulta esta regla para entender la organización general del proyecto y la ubicación de los principales módulos y recursos.
+

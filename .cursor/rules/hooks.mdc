@@ -1,0 +1,14 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Carpeta [hooks](mdc:hooks)
+
+Contiene hooks personalizados de React para lógica reutilizable en el dashboard.
+
+- [hooks/use-toast.ts](mdc:hooks/use-toast.ts): Hook para mostrar notificaciones tipo toast en la interfaz.
+- [hooks/use-mobile.tsx](mdc:hooks/use-mobile.tsx): Hook para detectar si la vista es móvil y adaptar la UI.
+
+Consulta esta carpeta para lógica de React reutilizable entre componentes o páginas.
+
