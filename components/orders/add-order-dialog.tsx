@@ -173,6 +173,7 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
       const relatedMaterials = data.map((item) => ({
         id: item.material_id,
         name: item.materials.name,
+        type: item.materials?.type || "Sin tipo", // ← ¡Corrección aquí!
         cost: item.materials.cost || 0,
       }));
 
@@ -196,35 +197,34 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
     selectedMaterialIds: string[]
   ) => {
     const sofaModel = sofaModels.find((model) => model.id === sofaId);
-    if (sofaModel) {
-      const basePrice = sofaModel.final_price;
-      const materialCost = materials
-        .filter((material) => selectedMaterialIds.includes(material.id))
-        .reduce((sum, material) => sum + (material.cost || 0), 0);
+    if (!sofaModel) return;
 
-      const unitPrice = basePrice + materialCost;
-      const totalPrice = unitPrice * quantity;
+    // Usa los materiales del estado actual
+    const materialCost = selectedMaterialIds
+      .map((id) => materials.find((m) => m.id === id)?.cost || 0)
+      .reduce((sum, cost) => sum + cost, 0);
 
-      form.setValue(`items.${index}.unit_price`, unitPrice);
-      form.setValue(`items.${index}.total_price`, totalPrice);
-    }
+    const unitPrice = sofaModel.final_price + materialCost;
+    const totalPrice = unitPrice * quantity;
+
+    form.setValue(`items.${index}.unit_price`, unitPrice);
+    form.setValue(`items.${index}.total_price`, totalPrice);
   };
-  console.log("materials:", materials);
+
   const handleSofaChange = async (index: number, sofaId: string) => {
     const materials = await fetchMaterialsBySofa(sofaId);
     const materialIds = materials.map((m) => m.id);
 
-    // Actualiza los materiales seleccionados Y el precio en el mismo paso:
     form.setValue(`items.${index}.selected_materials`, materialIds, {
-      shouldValidate: true, // ← Fuerza la validación
+      shouldValidate: true, // ← Fuerza la actualización
     });
 
-    // ¡Actualiza el precio aquí mismo!
+    // Actualiza precios inmediatamente
     updateItemPrices(
       index,
       sofaId,
       form.getValues(`items.${index}.quantity`),
-      materialIds // Pasa todos los IDs de materiales seleccionados
+      materialIds
     );
   };
 
