@@ -103,7 +103,6 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [sofaModels, setSofaModels] = useState<SofaModel[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
-  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -173,11 +172,10 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
       const relatedMaterials = data.map((item) => ({
         id: item.material_id,
         name: item.materials.name,
-        type: item.materials?.type || "Sin tipo", // ← ¡Corrección aquí!
+        type: item.materials?.type || "Sin tipo",
         cost: item.materials.cost || 0,
       }));
 
-      setMaterials(relatedMaterials);
       return relatedMaterials;
     } catch (error) {
       console.error("Error fetching materials for sofa:", error);
@@ -199,7 +197,6 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
     const sofaModel = sofaModels.find((model) => model.id === sofaId);
     if (!sofaModel) return;
 
-    // Usa los materiales del estado actual
     const materialCost = selectedMaterialIds
       .map((id) => materials.find((m) => m.id === id)?.cost || 0)
       .reduce((sum, cost) => sum + cost, 0);
@@ -212,11 +209,15 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
   };
 
   const handleSofaChange = async (index: number, sofaId: string) => {
-    const materials = await fetchMaterialsBySofa(sofaId);
-    const materialIds = materials.map((m) => m.id);
+    const fetchedMaterials = await fetchMaterialsBySofa(sofaId);
+    const materialIds = fetchedMaterials.map((m) => m.id);
 
+    // Actualiza los materiales en el estado local
+    setMaterials(fetchedMaterials);
+
+    // Actualiza los materiales seleccionados en el formulario
     form.setValue(`items.${index}.selected_materials`, materialIds, {
-      shouldValidate: true, // ← Fuerza la actualización
+      shouldValidate: true,
     });
 
     // Actualiza precios inmediatamente
@@ -661,8 +662,8 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                             options={materials.map((material) => ({
                               value: material.id,
                               name: material.name,
-                              type: material.type, // Asegúrate de incluir esto
-                              cost: material.cost, // y esto
+                              type: material.type,
+                              cost: material.cost,
                             }))}
                             selected={form.getValues(
                               `items.${index}.selected_materials`
@@ -736,14 +737,14 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                       minimumFractionDigits: 2,
                     }).format(
                       form.watch("items").reduce((sum, item) => {
-                        const sofaModel = sofaModels.find(
-                          (model) => model.id === item.sofa_id
-                        );
-                        if (!sofaModel) return sum;
-
-                        const basePrice = sofaModel.final_price;
                         const materialCost =
-                          (item.unit_price - basePrice) * item.quantity;
+                          item.selected_materials
+                            .map(
+                              (id) =>
+                                materials.find((m) => m.id === id)?.cost || 0
+                            )
+                            .reduce((sum, cost) => sum + cost, 0) *
+                          item.quantity;
                         return sum + materialCost;
                       }, 0)
                     )}
