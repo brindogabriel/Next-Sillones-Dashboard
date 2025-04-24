@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { MultiSelect } from "./MultiSelect";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm } from "react-hook-form";
 import { z } from "zod";
@@ -35,6 +36,14 @@ import {
 } from "@/components/ui/select";
 import type { SofaModel } from "../sofas/columns";
 import { Trash } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+
+interface Material {
+  id: string;
+  name: string;
+  type: string;
+  cost: number;
+}
 
 const orderItemSchema = z.object({
   sofa_id: z.string({
@@ -49,6 +58,7 @@ const orderItemSchema = z.object({
   total_price: z.coerce.number().positive({
     message: "El precio total debe ser un número positivo",
   }),
+  selected_materials: z.array(z.string()).default([]),
 });
 
 const formSchema = z.object({
@@ -92,6 +102,8 @@ interface AddOrderDialogProps {
 export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [sofaModels, setSofaModels] = useState<SofaModel[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -113,6 +125,7 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
           quantity: 1,
           unit_price: 0,
           total_price: 0,
+          selected_materials: [],
         },
       ],
     },
@@ -148,32 +161,123 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
     }
   }
 
-  // Update unit price and total price when sofa model or quantity changes
+  async function fetchMaterialsBySofa(sofaId: string) {
+    try {
+      const { data, error } = await supabase
+        .from("sofa_materials")
+        .select("material_id, materials(name, type, cost)")
+        .eq("sofa_id", sofaId);
+
+      if (error) throw error;
+
+      const relatedMaterials = data.map((item) => ({
+        id: item.material_id,
+        name: item.materials.name,
+        cost: item.materials.cost || 0,
+      }));
+
+      setMaterials(relatedMaterials);
+      return relatedMaterials;
+    } catch (error) {
+      console.error("Error fetching materials for sofa:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los materiales del sillón.",
+        variant: "destructive",
+      });
+      return [];
+    }
+  }
+
   const updateItemPrices = (
     index: number,
     sofaId: string,
-    quantity: number
+    quantity: number,
+    selectedMaterialIds: string[]
   ) => {
     const sofaModel = sofaModels.find((model) => model.id === sofaId);
     if (sofaModel) {
-      const unitPrice = sofaModel.final_price;
+      const basePrice = sofaModel.final_price;
+      const materialCost = materials
+        .filter((material) => selectedMaterialIds.includes(material.id))
+        .reduce((sum, material) => sum + (material.cost || 0), 0);
+
+      const unitPrice = basePrice + materialCost;
       const totalPrice = unitPrice * quantity;
 
       form.setValue(`items.${index}.unit_price`, unitPrice);
       form.setValue(`items.${index}.total_price`, totalPrice);
     }
   };
+  console.log("materials:", materials);
+  const handleSofaChange = async (index: number, sofaId: string) => {
+    const materials = await fetchMaterialsBySofa(sofaId);
+    const materialIds = materials.map((m) => m.id);
+
+    form.setValue(`items.${index}.selected_materials`, materialIds);
+
+    updateItemPrices(
+      index,
+      sofaId,
+      form.getValues(`items.${index}.quantity`),
+      materialIds
+    );
+  };
+
+  const handleQuantityChange = (index: number, value: number) => {
+    const sofaId = form.getValues(`items.${index}.sofa_id`);
+    const selectedMaterials = form.getValues(
+      `items.${index}.selected_materials`
+    );
+
+    if (sofaId) {
+      updateItemPrices(index, sofaId, value, selectedMaterials);
+    }
+  };
+
+  const toggleMaterial = (index: number, materialId: string) => {
+    const currentMaterials = form.getValues(
+      `items.${index}.selected_materials`
+    );
+    const newMaterials = currentMaterials.includes(materialId)
+      ? currentMaterials.filter((id) => id !== materialId)
+      : [...currentMaterials, materialId];
+
+    form.setValue(`items.${index}.selected_materials`, newMaterials);
+
+    updateItemPrices(
+      index,
+      form.getValues(`items.${index}.sofa_id`),
+      form.getValues(`items.${index}.quantity`),
+      newMaterials
+    );
+  };
+
+  const toggleAllMaterials = (index: number) => {
+    const currentMaterials = form.getValues(
+      `items.${index}.selected_materials`
+    );
+    const allSelected = currentMaterials.length === materials.length;
+    const newMaterials = allSelected ? [] : materials.map((m) => m.id);
+
+    form.setValue(`items.${index}.selected_materials`, newMaterials);
+
+    updateItemPrices(
+      index,
+      form.getValues(`items.${index}.sofa_id`),
+      form.getValues(`items.${index}.quantity`),
+      newMaterials
+    );
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
 
     try {
-      // Calculate total amount
       const totalAmount =
         values.items.reduce((sum, item) => sum + item.total_price, 0) +
         values.shipping_cost;
 
-      // Insert order
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -194,7 +298,6 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
 
       if (orderError) throw orderError;
 
-      // Insert order items
       const orderItems = values.items.map((item) => ({
         order_id: orderData.id,
         sofa_id: item.sofa_id,
@@ -452,11 +555,7 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                               <Select
                                 onValueChange={(value) => {
                                   field.onChange(value);
-                                  updateItemPrices(
-                                    index,
-                                    value,
-                                    form.getValues(`items.${index}.quantity`)
-                                  );
+                                  handleSofaChange(index, value);
                                 }}
                                 defaultValue={field.value}
                               >
@@ -489,12 +588,9 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                                   min="1"
                                   {...field}
                                   onChange={(e) => {
-                                    field.onChange(e);
-                                    updateItemPrices(
-                                      index,
-                                      form.getValues(`items.${index}.sofa_id`),
-                                      Number.parseInt(e.target.value)
-                                    );
+                                    const value = parseInt(e.target.value) || 1;
+                                    field.onChange(value);
+                                    handleQuantityChange(index, value);
                                   }}
                                 />
                               </FormControl>
@@ -554,6 +650,40 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                           )}
                         </div>
                       </div>
+                      <div>
+                        <h3 className="text-lg font-medium mb-2">Materiales</h3>
+                        {materials.length > 0 ? (
+                          <MultiSelect
+                            options={materials.map((material) => ({
+                              value: material.id,
+                              name: material.name,
+                              type: material.type, // Asegúrate de incluir esto
+                              cost: material.cost, // y esto
+                            }))}
+                            selected={form.getValues(
+                              `items.${index}.selected_materials`
+                            )}
+                            onChange={(selected) => {
+                              form.setValue(
+                                `items.${index}.selected_materials`,
+                                selected
+                              );
+                              updateItemPrices(
+                                index,
+                                form.getValues(`items.${index}.sofa_id`),
+                                form.getValues(`items.${index}.quantity`),
+                                selected
+                              );
+                            }}
+                            placeholder="Selecciona materiales..."
+                          />
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            Selecciona un modelo de sillón para ver los
+                            materiales disponibles
+                          </p>
+                        )}
+                      </div>
                     </div>
                   ))}
                   <Button
@@ -565,6 +695,7 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                         quantity: 1,
                         unit_price: 0,
                         total_price: 0,
+                        selected_materials: [],
                       })
                     }
                   >
@@ -587,6 +718,30 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                       form
                         .watch("items")
                         .reduce((sum, item) => sum + item.total_price, 0)
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Costo de Materiales:
+                  </p>
+                  <p className="text-base font-medium">
+                    {new Intl.NumberFormat("es-AR", {
+                      style: "currency",
+                      currency: "ARS",
+                      minimumFractionDigits: 2,
+                    }).format(
+                      form.watch("items").reduce((sum, item) => {
+                        const sofaModel = sofaModels.find(
+                          (model) => model.id === item.sofa_id
+                        );
+                        if (!sofaModel) return sum;
+
+                        const basePrice = sofaModel.final_price;
+                        const materialCost =
+                          (item.unit_price - basePrice) * item.quantity;
+                        return sum + materialCost;
+                      }, 0)
                     )}
                   </p>
                 </div>
