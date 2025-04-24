@@ -214,13 +214,17 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
     const materials = await fetchMaterialsBySofa(sofaId);
     const materialIds = materials.map((m) => m.id);
 
-    form.setValue(`items.${index}.selected_materials`, materialIds);
+    // Actualiza los materiales seleccionados Y el precio en el mismo paso:
+    form.setValue(`items.${index}.selected_materials`, materialIds, {
+      shouldValidate: true, // ← Fuerza la validación
+    });
 
+    // ¡Actualiza el precio aquí mismo!
     updateItemPrices(
       index,
       sofaId,
       form.getValues(`items.${index}.quantity`),
-      materialIds
+      materialIds // Pasa todos los IDs de materiales seleccionados
     );
   };
 
