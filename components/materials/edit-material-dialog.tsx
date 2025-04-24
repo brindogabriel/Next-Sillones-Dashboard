@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,12 +13,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { toast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase"
-import type { Material } from "./columns"
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import type { Material } from "./columns";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -33,17 +40,21 @@ const formSchema = z.object({
   unit: z.string().min(1, {
     message: "La unidad es requerida.",
   }),
-})
+});
 
 interface EditMaterialDialogProps {
-  material: Material
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  material: Material;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function EditMaterialDialog({ material, open, onOpenChange }: EditMaterialDialogProps) {
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+export function EditMaterialDialog({
+  material,
+  open,
+  onOpenChange,
+}: EditMaterialDialogProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -53,7 +64,7 @@ export function EditMaterialDialog({ material, open, onOpenChange }: EditMateria
       cost: material.cost,
       unit: material.unit,
     },
-  })
+  });
 
   // Update form values when material changes
   useEffect(() => {
@@ -62,33 +73,36 @@ export function EditMaterialDialog({ material, open, onOpenChange }: EditMateria
       type: material.type,
       cost: material.cost,
       unit: material.unit,
-    })
-  }, [material, form])
+    });
+  }, [material, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
-      const { error } = await supabase.from("materials").update(values).eq("id", material.id)
+      const { error } = await supabase
+        .from("materials")
+        .update(values)
+        .eq("id", material.id);
 
-      if (error) throw error
+      if (error) throw error;
 
       toast({
         title: "Material actualizado",
         description: "El material ha sido actualizado exitosamente.",
-      })
+      });
 
-      onOpenChange(false)
-      router.refresh()
+      onOpenChange(false);
+      router.refresh();
     } catch (error) {
-      console.error("Error updating material:", error)
+      console.error("Error updating material:", error);
       toast({
         title: "Error",
         description: "Hubo un error al actualizar el material.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -97,7 +111,9 @@ export function EditMaterialDialog({ material, open, onOpenChange }: EditMateria
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Editar Material</DialogTitle>
-          <DialogDescription>Modifica los detalles del material.</DialogDescription>
+          <DialogDescription>
+            Modifica los detalles del material.
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -162,5 +178,5 @@ export function EditMaterialDialog({ material, open, onOpenChange }: EditMateria
         </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

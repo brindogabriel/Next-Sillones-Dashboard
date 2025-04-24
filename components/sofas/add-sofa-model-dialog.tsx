@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,9 +79,26 @@ export function AddSofaModelDialog({
     },
   });
 
+  // Observar cambios en materiales y porcentaje de ganancia
+  const watchedMaterials = useWatch({
+    control: form.control,
+    name: "materials",
+  });
+  const watchedProfit = useWatch({
+    control: form.control,
+    name: "profit_percentage",
+  });
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "materials",
+  });
+
+  // Calcular costos en tiempo real
+  const [costDetails, setCostDetails] = useState({
+    materialsCost: 0,
+    basePrice: 0,
+    finalPrice: 0,
   });
 
   useEffect(() => {
@@ -89,6 +106,10 @@ export function AddSofaModelDialog({
       fetchMaterials();
     }
   }, [open]);
+
+  useEffect(() => {
+    calculateCosts();
+  }, [watchedMaterials, watchedProfit]);
 
   async function fetchMaterials() {
     try {
@@ -109,27 +130,34 @@ export function AddSofaModelDialog({
     }
   }
 
+  function calculateCosts() {
+    let materialsCost = 0;
+
+    if (watchedMaterials && watchedMaterials.length > 0) {
+      watchedMaterials.forEach((item) => {
+        const material = availableMaterials.find(
+          (m) => m.id === item.material_id
+        );
+        if (material && item.quantity) {
+          materialsCost += material.cost * item.quantity;
+        }
+      });
+    }
+
+    const profitPercentage = watchedProfit || 0;
+    const finalPrice = materialsCost * (1 + profitPercentage / 100);
+
+    setCostDetails({
+      materialsCost,
+      basePrice: materialsCost,
+      finalPrice,
+    });
+  }
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
 
     try {
-      // Calcular el costo base basado en los materiales
-      let basePrice = 0;
-      if (values.materials && values.materials.length > 0) {
-        for (const item of values.materials) {
-          const material = availableMaterials.find(
-            (m) => m.id === item.material_id
-          );
-          if (material) {
-            basePrice += material.cost * item.quantity;
-          }
-        }
-      }
-
-      // Calcular el precio final con el porcentaje de ganancia
-      const finalPrice = basePrice * (1 + values.profit_percentage / 100);
-
-      // Insertar el modelo de sillón
       const { data: sofaData, error: sofaError } = await supabase
         .from("sofa_models")
         .insert([
@@ -137,8 +165,8 @@ export function AddSofaModelDialog({
             name: values.name,
             description: values.description || null,
             profit_percentage: values.profit_percentage,
-            base_price: basePrice,
-            final_price: finalPrice,
+            base_price: costDetails.basePrice,
+            final_price: costDetails.finalPrice,
           },
         ])
         .select("id")
@@ -146,7 +174,6 @@ export function AddSofaModelDialog({
 
       if (sofaError) throw sofaError;
 
-      // Insertar los materiales del sillón
       if (values.materials && values.materials.length > 0 && sofaData) {
         const sofaMaterials = values.materials
           .filter((item) => item.material_id && item.quantity > 0)
@@ -243,6 +270,41 @@ export function AddSofaModelDialog({
               )}
             />
 
+            {/* Sección de resumen de costos */}
+            <div className="space-y-2 p-4 border rounded-md">
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">
+                  Costo de Materiales:
+                </span>
+                <span className="font-medium">
+                  {new Intl.NumberFormat("es-AR", {
+                    style: "currency",
+                    currency: "ARS",
+                  }).format(costDetails.materialsCost)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">
+                  Precio Base:
+                </span>
+                <span className="font-medium">
+                  {new Intl.NumberFormat("es-AR", {
+                    style: "currency",
+                    currency: "ARS",
+                  }).format(costDetails.basePrice)}
+                </span>
+              </div>
+              <div className="flex justify-between pt-2 border-t">
+                <span className="text-sm font-medium">Precio Final:</span>
+                <span className="text-lg font-bold">
+                  {new Intl.NumberFormat("es-AR", {
+                    style: "currency",
+                    currency: "ARS",
+                  }).format(costDetails.finalPrice)}
+                </span>
+              </div>
+            </div>
+
             <div>
               <h3 className="text-lg font-medium mb-2">Materiales</h3>
               <div className="space-y-4">
@@ -273,7 +335,8 @@ export function AddSofaModelDialog({
                                     key={material.id}
                                     value={material.id}
                                   >
-                                    {material.name} ({material.type})
+                                    {material.name} ({material.type}) - $
+                                    {material.cost}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -294,6 +357,10 @@ export function AddSofaModelDialog({
                                 step="0.01"
                                 min="0.01"
                                 {...field}
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  calculateCosts();
+                                }}
                               />
                             </FormControl>
                             <FormMessage />
@@ -306,7 +373,10 @@ export function AddSofaModelDialog({
                         type="button"
                         variant="outline"
                         size="icon"
-                        onClick={() => remove(index)}
+                        onClick={() => {
+                          remove(index);
+                          calculateCosts();
+                        }}
                         disabled={fields.length === 1}
                       >
                         <Trash className="h-4 w-4" />
@@ -317,12 +387,12 @@ export function AddSofaModelDialog({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() =>
+                  onClick={() => {
                     append({
                       material_id: "",
                       quantity: 1,
-                    })
-                  }
+                    });
+                  }}
                 >
                   Agregar Material
                 </Button>

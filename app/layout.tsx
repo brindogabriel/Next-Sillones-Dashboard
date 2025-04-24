@@ -5,7 +5,6 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Sidebar } from "@/components/sidebar";
 import { Toaster } from "@/components/ui/toaster";
-import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"] });
 
