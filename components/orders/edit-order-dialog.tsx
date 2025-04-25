@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,8 +24,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
+import { MultiSelect } from "./MultiSelect"; // Asegurate que este import esté bien
 import {
   Select,
   SelectContent,
@@ -33,47 +35,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Order } from "./columns";
-import type { SofaModel } from "../sofas/columns";
-import { Trash } from "lucide-react";
+
+interface Material {
+  id: string;
+  name: string;
+  type?: string;
+  cost?: number;
+}
 
 const orderItemSchema = z.object({
-  id: z.string().optional(),
-  sofa_id: z.string({
-    required_error: "Selecciona un modelo de sillón",
-  }),
-  quantity: z.coerce.number().int().positive({
-    message: "La cantidad debe ser un número entero positivo",
-  }),
-  unit_price: z.coerce.number().positive({
-    message: "El precio unitario debe ser un número positivo",
-  }),
-  total_price: z.coerce.number().positive({
-    message: "El precio total debe ser un número positivo",
-  }),
+  sofa_id: z.string(),
+  quantity: z.coerce.number().int().positive(),
+  unit_price: z.coerce.number().positive(),
+  total_price: z.coerce.number().positive(),
+  selected_materials: z.array(z.string()),
 });
 
 const formSchema = z.object({
   customer_name: z.string().min(2),
   customer_phone: z.string().optional(),
-  customer_email: z.string().email().optional(),
-  customer_location: z.string().optional(),
-  customer_address: z.string().optional(),
+  customer_email: z.string().optional(),
   status: z.string(),
-  delivery_date: z.string().optional(),
-  payment_method: z.string(),
-  shipping_cost: z.coerce.number().min(0).default(0),
   notes: z.string().optional(),
-  items: z.array(orderItemSchema).min(1),
+  items: z.array(orderItemSchema),
 });
-
-interface OrderItem {
-  id: string;
-  order_id: string;
-  sofa_id: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-}
 
 interface EditOrderDialogProps {
   order: Order;
@@ -87,8 +72,8 @@ export function EditOrderDialog({
   onOpenChange,
 }: EditOrderDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [sofaModels, setSofaModels] = useState<SofaModel[]>([]);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [sofaModels, setSofaModels] = useState<any[]>([]);
+  const [materialsPorItem, setMaterialsPorItem] = useState<Material[][]>([]);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -97,14 +82,15 @@ export function EditOrderDialog({
       customer_name: order.customer_name,
       customer_phone: order.customer_phone || "",
       customer_email: order.customer_email || "",
-      customer_location: order.customer_location || "",
-      customer_address: order.customer_address || "",
       status: order.status,
-      delivery_date: order.delivery_date || "",
-      payment_method: order.payment_method || "efectivo",
-      shipping_cost: order.shipping_cost || 0,
       notes: order.notes || "",
-      items: [],
+      items: (order.items ?? []).map((item) => ({
+        sofa_id: item.sofa_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        selected_materials: item.selected_materials || [],
+      })),
     },
   });
 
@@ -116,9 +102,19 @@ export function EditOrderDialog({
   useEffect(() => {
     if (open) {
       fetchSofaModels();
-      fetchOrderItems();
     }
-  }, [open, order.id]);
+  }, [open]);
+
+  useEffect(() => {
+    if (fields.length !== materialsPorItem.length) {
+      setMaterialsPorItem((prev) => {
+        const nuevo = [...prev];
+        while (nuevo.length < fields.length) nuevo.push([]);
+        while (nuevo.length > fields.length) nuevo.pop();
+        return nuevo;
+      });
+    }
+  }, [fields.length]);
 
   async function fetchSofaModels() {
     try {
@@ -129,7 +125,7 @@ export function EditOrderDialog({
       if (error) throw error;
       setSofaModels(data || []);
     } catch (error) {
-      console.error("Error fetching sofa models:", error);
+      console.error(error);
       toast({
         title: "Error",
         description: "No se pudieron cargar los modelos de sillones.",
@@ -138,84 +134,89 @@ export function EditOrderDialog({
     }
   }
 
-  async function fetchOrderItems() {
+  async function fetchMaterialsBySofa(sofaId: string) {
     try {
       const { data, error } = await supabase
-        .from("order_items")
-        .select("*")
-        .eq("order_id", order.id);
+        .from("sofa_materials")
+        .select("material_id, materials(name, type, cost)")
+        .eq("sofa_id", sofaId);
+
       if (error) throw error;
-      setOrderItems(data || []);
-    } catch (error) {
-      console.error("Error fetching order items:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los detalles del pedido.",
-        variant: "destructive",
+
+      if (!data) return [];
+
+      const relatedMaterials = data.map((item: any) => {
+        const material = item.materials;
+        return {
+          id: item.material_id,
+          name: material?.name || "Material desconocido",
+          type: material?.type || "Sin tipo",
+          cost: material?.cost || 0,
+        };
       });
+
+      return relatedMaterials;
+    } catch (error) {
+      console.error(error);
+      return [];
     }
   }
 
   const updateItemPrices = (
     index: number,
     sofaId: string,
-    quantity: number
+    quantity: number,
+    selectedMaterialIds: string[]
   ) => {
     const sofaModel = sofaModels.find((model) => model.id === sofaId);
-    if (sofaModel) {
-      const unitPrice = sofaModel.final_price;
-      const totalPrice = unitPrice * quantity;
-      form.setValue(`items.${index}.unit_price`, unitPrice);
-      form.setValue(`items.${index}.total_price`, totalPrice);
-    }
+    if (!sofaModel) return;
+
+    const materials = materialsPorItem[index] || [];
+    const materialCost = selectedMaterialIds
+      .map((id) => materials.find((m) => m.id === id)?.cost || 0)
+      .reduce((sum, cost) => sum + cost, 0);
+
+    const unitPrice = sofaModel.final_price + materialCost;
+    const totalPrice = unitPrice * quantity;
+
+    form.setValue(`items.${index}.unit_price`, unitPrice);
+    form.setValue(`items.${index}.total_price`, totalPrice);
+  };
+
+  const handleSofaChange = async (index: number, sofaId: string) => {
+    const fetchedMaterials = await fetchMaterialsBySofa(sofaId);
+
+    setMaterialsPorItem((prev) => {
+      const nuevo = [...prev];
+      nuevo[index] = fetchedMaterials;
+      return nuevo;
+    });
+
+    form.setValue(`items.${index}.selected_materials`, []);
+    updateItemPrices(
+      index,
+      sofaId,
+      form.getValues(`items.${index}.quantity`),
+      []
+    );
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    try {
-      const totalAmount =
-        values.items.reduce((sum, item) => sum + item.total_price, 0) +
-        values.shipping_cost;
 
-      const { error: orderError } = await supabase
+    try {
+      const { error } = await supabase
         .from("orders")
         .update({
           customer_name: values.customer_name,
           customer_phone: values.customer_phone || null,
           customer_email: values.customer_email || null,
-          customer_location: values.customer_location || null,
-          customer_address: values.customer_address || null,
           status: values.status,
-          delivery_date: values.delivery_date || null,
-          payment_method: values.payment_method,
-          shipping_cost: values.shipping_cost,
-          total_amount: totalAmount,
           notes: values.notes || null,
         })
         .eq("id", order.id);
 
-      if (orderError) throw orderError;
-
-      const { error: deleteError } = await supabase
-        .from("order_items")
-        .delete()
-        .eq("order_id", order.id);
-
-      if (deleteError) throw deleteError;
-
-      const orderItems = values.items.map((item) => ({
-        order_id: order.id,
-        sofa_id: item.sofa_id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
+      if (error) throw error;
 
       toast({
         title: "Pedido actualizado",
@@ -225,7 +226,7 @@ export function EditOrderDialog({
       onOpenChange(false);
       router.refresh();
     } catch (error) {
-      console.error("Error updating order:", error);
+      console.error(error);
       toast({
         title: "Error",
         description: "Hubo un error al actualizar el pedido.",
@@ -238,20 +239,155 @@ export function EditOrderDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px]">
+      <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
           <DialogTitle>Editar Pedido</DialogTitle>
           <DialogDescription>
-            Modifica los detalles del pedido y los sillones asociados.
+            Modifica los detalles del pedido.
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto pr-1 max-h-[70vh]">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Resto del formulario */}
-            </form>
-          </Form>
-        </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="customer_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nombre del Cliente</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="customer_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Teléfono</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="customer_email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un estado" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="pending">Pendiente</SelectItem>
+                        <SelectItem value="in_progress">En Progreso</SelectItem>
+                        <SelectItem value="completed">Completado</SelectItem>
+                        <SelectItem value="cancelled">Cancelado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notas</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="space-y-4">
+              {fields.map((field, index) => (
+                <div key={field.id} className="p-4 border rounded-md space-y-4">
+                  <FormField
+                    control={form.control}
+                    name={`items.${index}.sofa_id`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Modelo</FormLabel>
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleSofaChange(index, value);
+                          }}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona un modelo" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {sofaModels.map((model) => (
+                              <SelectItem key={model.id} value={model.id}>
+                                {model.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <MultiSelect
+                    options={materialsPorItem[index] || []}
+                    selected={form.getValues(
+                      `items.${index}.selected_materials`
+                    )}
+                    onChange={(selected) =>
+                      form.setValue(
+                        `items.${index}.selected_materials`,
+                        selected
+                      )
+                    }
+                    placeholder="Selecciona materiales..."
+                  />
+                </div>
+              ))}
+            </div>
+
+            <DialogFooter>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Guardando..." : "Guardar cambios"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

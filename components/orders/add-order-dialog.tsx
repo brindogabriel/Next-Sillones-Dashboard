@@ -183,7 +183,7 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
       `
         )
         .eq("sofa_id", sofaId);
-      console.log(data);
+
       if (error) throw error;
 
       if (!data) return [];
@@ -198,7 +198,7 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
         }[];
       }
       const relatedMaterials = data.map((item: SofaMaterialResponse) => {
-        const material = item.materials[0]; // Selecciona el primer material
+        const material = item.materials;
         return {
           id: item.material_id,
           name: material?.name || "Material desconocido",
