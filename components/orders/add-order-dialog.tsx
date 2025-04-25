@@ -172,17 +172,26 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
     try {
       const { data, error } = await supabase
         .from("sofa_materials")
-        .select("material_id, materials(name, type, cost)")
+        .select("material_id, materials (name, type, cost)")
         .eq("sofa_id", sofaId);
 
       if (error) throw error;
 
-      const relatedMaterials = data.map((item) => ({
-        id: item.material_id,
-        name: item.materials.name,
-        type: item.materials?.type || "Sin tipo",
-        cost: item.materials.cost || 0,
-      }));
+      const relatedMaterials = data.map(
+        (item: {
+          material_id: string;
+          materials: {
+            name: string;
+            type?: string;
+            cost?: number;
+          };
+        }) => ({
+          id: item.material_id,
+          name: item.materials.name,
+          type: item.materials?.type || "Sin tipo",
+          cost: item.materials?.cost || 0,
+        })
+      );
 
       return relatedMaterials;
     } catch (error) {
@@ -195,7 +204,6 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
       return [];
     }
   }
-
   const updateItemPrices = (
     index: number,
     sofaId: string,
