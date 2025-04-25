@@ -183,28 +183,29 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
       `
         )
         .eq("sofa_id", sofaId);
-
+      console.log(data);
       if (error) throw error;
 
       if (!data) return [];
 
       // Type the response data explicitly
-      type SofaMaterialResponse = {
+      interface SofaMaterialResponse {
         material_id: string;
         materials: {
           name: string;
           type?: string;
           cost?: number;
-        } | null; // materials can be null if the relationship doesn't exist
-      };
-
-      const relatedMaterials = data.map((item: SofaMaterialResponse) => ({
-        id: item.material_id,
-        name: item.materials?.name || "Material desconocido",
-        type: item.materials?.type || "Sin tipo",
-        cost: item.materials?.cost || 0,
-      }));
-
+        }[];
+      }
+      const relatedMaterials = data.map((item: SofaMaterialResponse) => {
+        const material = item.materials[0]; // Selecciona el primer material
+        return {
+          id: item.material_id,
+          name: material?.name || "Material desconocido",
+          type: material?.type || "Sin tipo",
+          cost: material?.cost || 0,
+        };
+      });
       return relatedMaterials;
     } catch (error) {
       console.error("Error fetching materials for sofa:", error);
