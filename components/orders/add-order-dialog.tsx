@@ -58,7 +58,7 @@ const orderItemSchema = z.object({
   total_price: z.coerce.number().positive({
     message: "El precio total debe ser un número positivo",
   }),
-  selected_materials: z.array(z.string()).default([]),
+  selected_materials: z.array(z.string()),
 });
 
 const formSchema = z.object({
