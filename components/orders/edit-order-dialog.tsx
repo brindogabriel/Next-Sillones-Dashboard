@@ -53,35 +53,17 @@ const orderItemSchema = z.object({
 });
 
 const formSchema = z.object({
-  customer_name: z.string().min(2, {
-    message: "El nombre del cliente debe tener al menos 2 caracteres.",
-  }),
+  customer_name: z.string().min(2),
   customer_phone: z.string().optional(),
-  customer_email: z
-    .string()
-    .email({
-      message: "Ingresa un correo electrónico válido.",
-    })
-    .optional(),
+  customer_email: z.string().email().optional(),
   customer_location: z.string().optional(),
   customer_address: z.string().optional(),
-  status: z.string({
-    required_error: "Selecciona un estado para el pedido",
-  }),
+  status: z.string(),
   delivery_date: z.string().optional(),
-  payment_method: z.string({
-    required_error: "Selecciona un método de pago",
-  }),
-  shipping_cost: z.coerce
-    .number()
-    .min(0, {
-      message: "El costo de envío debe ser un número positivo o cero",
-    })
-    .default(0),
+  payment_method: z.string(),
+  shipping_cost: z.coerce.number().min(0).default(0),
   notes: z.string().optional(),
-  items: z.array(orderItemSchema).min(1, {
-    message: "Debes agregar al menos un modelo de sillón al pedido",
-  }),
+  items: z.array(orderItemSchema).min(1),
 });
 
 interface OrderItem {
@@ -109,23 +91,7 @@ export function EditOrderDialog({
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const router = useRouter();
 
-  const formSchema = z.object({
-    customer_name: z.string().min(2),
-    customer_phone: z.string().optional(),
-    customer_email: z.string().email().optional(),
-    customer_location: z.string().optional(),
-    customer_address: z.string().optional(),
-    status: z.string(),
-    delivery_date: z.string().optional(),
-    payment_method: z.string(),
-    shipping_cost: z.coerce.number().min(0).default(0),
-    notes: z.string().optional(),
-    items: z.array(orderItemSchema).min(1),
-  });
-
-  type FormValues = z.infer<typeof formSchema>;
-
-  const form = useForm<FormValues>({
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       customer_name: order.customer_name,
@@ -142,6 +108,11 @@ export function EditOrderDialog({
     },
   });
 
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
+
   useEffect(() => {
     if (open) {
       fetchSofaModels();
@@ -149,31 +120,57 @@ export function EditOrderDialog({
     }
   }, [open, order.id]);
 
-  useEffect(() => {
-    if (orderItems.length > 0) {
-      form.reset({
-        customer_name: order.customer_name,
-        customer_phone: order.customer_phone || "",
-        customer_email: order.customer_email || "",
-        customer_location: order.customer_location || "",
-        customer_address: order.customer_address || "",
-        status: order.status,
-        delivery_date: order.delivery_date || "",
-        payment_method: order.payment_method || "efectivo",
-        shipping_cost: order.shipping_cost || 0,
-        notes: order.notes || "",
-        items: orderItems.map((item) => ({
-          id: item.id,
-          sofa_id: item.sofa_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-        })),
+  async function fetchSofaModels() {
+    try {
+      const { data, error } = await supabase
+        .from("sofa_models")
+        .select("*")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      setSofaModels(data || []);
+    } catch (error) {
+      console.error("Error fetching sofa models:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los modelos de sillones.",
+        variant: "destructive",
       });
     }
-  }, [order, form, orderItems]);
+  }
 
-  async function onSubmit(values: FormValues) {
+  async function fetchOrderItems() {
+    try {
+      const { data, error } = await supabase
+        .from("order_items")
+        .select("*")
+        .eq("order_id", order.id);
+      if (error) throw error;
+      setOrderItems(data || []);
+    } catch (error) {
+      console.error("Error fetching order items:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los detalles del pedido.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  const updateItemPrices = (
+    index: number,
+    sofaId: string,
+    quantity: number
+  ) => {
+    const sofaModel = sofaModels.find((model) => model.id === sofaId);
+    if (sofaModel) {
+      const unitPrice = sofaModel.final_price;
+      const totalPrice = unitPrice * quantity;
+      form.setValue(`items.${index}.unit_price`, unitPrice);
+      form.setValue(`items.${index}.total_price`, totalPrice);
+    }
+  };
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
       const totalAmount =
@@ -252,34 +249,6 @@ export function EditOrderDialog({
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Resto del formulario */}
-              <FormField
-                control={form.control}
-                name="shipping_cost"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Costo de Envío</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...field}
-                        onChange={(e) => {
-                          const value =
-                            e.target.value === "" ? 0 : Number(e.target.value);
-                          field.onChange(value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {/* Botón de Guardar */}
-              <DialogFooter>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Guardando..." : "Guardar"}
-                </Button>
-              </DialogFooter>
             </form>
           </Form>
         </div>
