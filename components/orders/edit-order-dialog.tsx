@@ -146,7 +146,7 @@ export function EditOrderDialog({
       if (!data) return [];
 
       const relatedMaterials = data.map((item: any) => {
-        const material = item.materials;
+        const material = item.materials?.[0]; // 🔥 agarramos el primero si es array
         return {
           id: item.material_id,
           name: material?.name || "Material desconocido",
@@ -154,8 +154,6 @@ export function EditOrderDialog({
           cost: material?.cost || 0,
         };
       });
-
-      return relatedMaterials;
     } catch (error) {
       console.error(error);
       return [];
