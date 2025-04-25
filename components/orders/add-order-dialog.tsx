@@ -65,7 +65,7 @@ const formSchema = z.object({
   customer_name: z.string().min(2, {
     message: "El nombre del cliente debe tener al menos 2 caracteres.",
   }),
-  customer_phone: z.string().optional(),
+  customer_phone: z.string().optional().or(z.literal("")),
   customer_email: z
     .string()
     .email({
@@ -82,12 +82,9 @@ const formSchema = z.object({
   payment_method: z.string({
     required_error: "Selecciona un método de pago",
   }),
-  shipping_cost: z.preprocess(
-    (val) => (val === "" || val === undefined ? 0 : Number(val)),
-    z.number().min(0, {
-      message: "El costo de envío debe ser un número positivo o cero",
-    })
-  ),
+  shipping_cost: z.number().min(0, {
+    message: "El costo de envío debe ser un número positivo o cero",
+  }),
   notes: z.string().optional(),
   items: z.array(orderItemSchema).min(1, {
     message: "Debes agregar al menos un modelo de sillón al pedido",
@@ -527,7 +524,12 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                   <FormItem>
                     <FormLabel>Costo de Envío</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" {...field} />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
