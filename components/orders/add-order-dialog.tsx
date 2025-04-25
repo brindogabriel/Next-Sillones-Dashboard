@@ -82,12 +82,12 @@ const formSchema = z.object({
   payment_method: z.string({
     required_error: "Selecciona un método de pago",
   }),
-  shipping_cost: z.coerce
-    .number()
-    .min(0, {
+  shipping_cost: z.preprocess(
+    (val) => (val === "" || val === undefined ? 0 : Number(val)),
+    z.number().min(0, {
       message: "El costo de envío debe ser un número positivo o cero",
     })
-    .default(0),
+  ),
   notes: z.string().optional(),
   items: z.array(orderItemSchema).min(1, {
     message: "Debes agregar al menos un modelo de sillón al pedido",
