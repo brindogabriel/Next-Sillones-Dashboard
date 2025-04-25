@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -63,14 +62,13 @@ const formSchema = z.object({
     .email({
       message: "Ingresa un correo electrónico válido.",
     })
-    .optional()
-    .or(z.literal("")),
-  customer_location: z.string().optional().or(z.literal("")),
-  customer_address: z.string().optional().or(z.literal("")),
+    .optional(),
+  customer_location: z.string().optional(),
+  customer_address: z.string().optional(),
   status: z.string({
     required_error: "Selecciona un estado para el pedido",
   }),
-  delivery_date: z.string().optional().or(z.literal("")),
+  delivery_date: z.string().optional(),
   payment_method: z.string({
     required_error: "Selecciona un método de pago",
   }),
@@ -133,7 +131,6 @@ export function EditOrderDialog({
     name: "items",
   });
 
-  // Cargar modelos de sillones y datos de pedido cuando el diálogo se abre
   useEffect(() => {
     if (open) {
       fetchSofaModels();
@@ -141,7 +138,6 @@ export function EditOrderDialog({
     }
   }, [open, order.id]);
 
-  // Actualizar formulario cuando los datos del pedido cambian
   useEffect(() => {
     if (orderItems.length > 0) {
       form.reset({
@@ -172,7 +168,6 @@ export function EditOrderDialog({
         .from("sofa_models")
         .select("*")
         .order("name", { ascending: true });
-
       if (error) throw error;
       setSofaModels(data || []);
     } catch (error) {
@@ -191,7 +186,6 @@ export function EditOrderDialog({
         .from("order_items")
         .select("*")
         .eq("order_id", order.id);
-
       if (error) throw error;
       setOrderItems(data || []);
     } catch (error) {
@@ -204,7 +198,6 @@ export function EditOrderDialog({
     }
   }
 
-  // Actualizar precio unitario y total cuando cambia el modelo o la cantidad
   const updateItemPrices = (
     index: number,
     sofaId: string,
@@ -214,7 +207,6 @@ export function EditOrderDialog({
     if (sofaModel) {
       const unitPrice = sofaModel.final_price;
       const totalPrice = unitPrice * quantity;
-
       form.setValue(`items.${index}.unit_price`, unitPrice);
       form.setValue(`items.${index}.total_price`, totalPrice);
     }
@@ -222,14 +214,11 @@ export function EditOrderDialog({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-
     try {
-      // Calcular monto total
       const totalAmount =
         values.items.reduce((sum, item) => sum + item.total_price, 0) +
         values.shipping_cost;
 
-      // Actualizar información del pedido
       const { error: orderError } = await supabase
         .from("orders")
         .update({
@@ -249,7 +238,6 @@ export function EditOrderDialog({
 
       if (orderError) throw orderError;
 
-      // Eliminar los items existentes
       const { error: deleteError } = await supabase
         .from("order_items")
         .delete()
@@ -257,7 +245,6 @@ export function EditOrderDialog({
 
       if (deleteError) throw deleteError;
 
-      // Insertar los nuevos items
       const orderItems = values.items.map((item) => ({
         order_id: order.id,
         sofa_id: item.sofa_id,
@@ -303,6 +290,7 @@ export function EditOrderDialog({
         <div className="overflow-y-auto pr-1 max-h-[70vh]">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Cliente */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -445,6 +433,7 @@ export function EditOrderDialog({
                 />
               </div>
 
+              {/* Costo de Envío */}
               <FormField
                 control={form.control}
                 name="shipping_cost"
@@ -456,7 +445,7 @@ export function EditOrderDialog({
                         type="number"
                         step="0.01"
                         {...field}
-                        value={field.value || ""}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -464,6 +453,7 @@ export function EditOrderDialog({
                 )}
               />
 
+              {/* Notas */}
               <FormField
                 control={form.control}
                 name="notes"
@@ -478,6 +468,7 @@ export function EditOrderDialog({
                 )}
               />
 
+              {/* Items del Pedido */}
               <div>
                 <h3 className="text-lg font-medium mb-2">
                   Modelos de Sillones
@@ -619,6 +610,7 @@ export function EditOrderDialog({
                 </div>
               </div>
 
+              {/* Resumen del Pedido */}
               <div className="text-right mt-4 space-y-2">
                 <div>
                   <p className="text-sm text-muted-foreground">
@@ -667,6 +659,7 @@ export function EditOrderDialog({
                 </div>
               </div>
 
+              {/* Botón de Guardar */}
               <DialogFooter>
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? "Guardando..." : "Guardar"}
