@@ -109,7 +109,23 @@ export function EditOrderDialog({
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const router = useRouter();
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const formSchema = z.object({
+    customer_name: z.string().min(2),
+    customer_phone: z.string().optional(),
+    customer_email: z.string().email().optional(),
+    customer_location: z.string().optional(),
+    customer_address: z.string().optional(),
+    status: z.string(),
+    delivery_date: z.string().optional(),
+    payment_method: z.string(),
+    shipping_cost: z.coerce.number().min(0).default(0),
+    notes: z.string().optional(),
+    items: z.array(orderItemSchema).min(1),
+  });
+
+  type FormValues = z.infer<typeof formSchema>;
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       customer_name: order.customer_name,
@@ -124,11 +140,6 @@ export function EditOrderDialog({
       notes: order.notes || "",
       items: [],
     },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "items",
   });
 
   useEffect(() => {
@@ -162,57 +173,7 @@ export function EditOrderDialog({
     }
   }, [order, form, orderItems]);
 
-  async function fetchSofaModels() {
-    try {
-      const { data, error } = await supabase
-        .from("sofa_models")
-        .select("*")
-        .order("name", { ascending: true });
-      if (error) throw error;
-      setSofaModels(data || []);
-    } catch (error) {
-      console.error("Error fetching sofa models:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los modelos de sillones.",
-        variant: "destructive",
-      });
-    }
-  }
-
-  async function fetchOrderItems() {
-    try {
-      const { data, error } = await supabase
-        .from("order_items")
-        .select("*")
-        .eq("order_id", order.id);
-      if (error) throw error;
-      setOrderItems(data || []);
-    } catch (error) {
-      console.error("Error fetching order items:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los detalles del pedido.",
-        variant: "destructive",
-      });
-    }
-  }
-
-  const updateItemPrices = (
-    index: number,
-    sofaId: string,
-    quantity: number
-  ) => {
-    const sofaModel = sofaModels.find((model) => model.id === sofaId);
-    if (sofaModel) {
-      const unitPrice = sofaModel.final_price;
-      const totalPrice = unitPrice * quantity;
-      form.setValue(`items.${index}.unit_price`, unitPrice);
-      form.setValue(`items.${index}.total_price`, totalPrice);
-    }
-  };
-
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: FormValues) {
     setIsLoading(true);
     try {
       const totalAmount =
@@ -290,150 +251,7 @@ export function EditOrderDialog({
         <div className="overflow-y-auto pr-1 max-h-[70vh]">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Cliente */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="customer_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nombre del Cliente</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="customer_phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Teléfono</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value || ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="customer_email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value || ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="customer_location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Localidad</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value || ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="customer_address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Dirección</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value || ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estado</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecciona un estado" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="pending">Pendiente</SelectItem>
-                          <SelectItem value="in_progress">
-                            En Progreso
-                          </SelectItem>
-                          <SelectItem value="completed">Completado</SelectItem>
-                          <SelectItem value="delivered">Entregado</SelectItem>
-                          <SelectItem value="stock">En Stock</SelectItem>
-                          <SelectItem value="cancelled">Cancelado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="delivery_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fecha Máxima de Entrega</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="payment_method"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Método de Pago</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecciona un método de pago" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="efectivo">Efectivo</SelectItem>
-                          <SelectItem value="transferencia">
-                            Transferencia
-                          </SelectItem>
-                          <SelectItem value="tarjeta">Tarjeta</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Costo de Envío */}
+              {/* Resto del formulario */}
               <FormField
                 control={form.control}
                 name="shipping_cost"
@@ -445,220 +263,17 @@ export function EditOrderDialog({
                         type="number"
                         step="0.01"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        onChange={(e) => {
+                          const value =
+                            e.target.value === "" ? 0 : Number(e.target.value);
+                          field.onChange(value);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              {/* Notas */}
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notas</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} value={field.value || ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Items del Pedido */}
-              <div>
-                <h3 className="text-lg font-medium mb-2">
-                  Modelos de Sillones
-                </h3>
-                <div className="space-y-4">
-                  {fields.map((field, index) => (
-                    <div
-                      key={field.id}
-                      className="flex flex-col gap-4 p-4 border rounded-md"
-                    >
-                      <div className="grid gap-4 sm:grid-cols-3">
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.sofa_id`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Modelo</FormLabel>
-                              <Select
-                                onValueChange={(value) => {
-                                  field.onChange(value);
-                                  updateItemPrices(
-                                    index,
-                                    value,
-                                    form.getValues(`items.${index}.quantity`)
-                                  );
-                                }}
-                                defaultValue={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona un modelo" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {sofaModels.map((model) => (
-                                    <SelectItem key={model.id} value={model.id}>
-                                      {model.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.quantity`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Cantidad</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  {...field}
-                                  onChange={(e) => {
-                                    field.onChange(e);
-                                    updateItemPrices(
-                                      index,
-                                      form.getValues(`items.${index}.sofa_id`),
-                                      Number.parseInt(e.target.value)
-                                    );
-                                  }}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.unit_price`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Precio Unitario</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  {...field}
-                                  readOnly
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <FormField
-                          control={form.control}
-                          name={`items.${index}.total_price`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Precio Total</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  {...field}
-                                  readOnly
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <div className="flex items-end">
-                          {fields.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => remove(index)}
-                              className="ml-auto"
-                            >
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() =>
-                      append({
-                        sofa_id: "",
-                        quantity: 1,
-                        unit_price: 0,
-                        total_price: 0,
-                      })
-                    }
-                  >
-                    Agregar Modelo
-                  </Button>
-                </div>
-              </div>
-
-              {/* Resumen del Pedido */}
-              <div className="text-right mt-4 space-y-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Subtotal Productos:
-                  </p>
-                  <p className="text-base font-medium">
-                    {new Intl.NumberFormat("es-AR", {
-                      style: "currency",
-                      currency: "ARS",
-                      minimumFractionDigits: 2,
-                    }).format(
-                      form
-                        .watch("items")
-                        .reduce((sum, item) => sum + item.total_price, 0)
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Costo de Envío:
-                  </p>
-                  <p className="text-base font-medium">
-                    {new Intl.NumberFormat("es-AR", {
-                      style: "currency",
-                      currency: "ARS",
-                      minimumFractionDigits: 2,
-                    }).format(form.watch("shipping_cost") || 0)}
-                  </p>
-                </div>
-                <div className="border-t pt-2 mt-2">
-                  <h3 className="text-lg font-medium">
-                    Precio Total del Pedido
-                  </h3>
-                  <p className="text-xl font-bold">
-                    {new Intl.NumberFormat("es-AR", {
-                      style: "currency",
-                      currency: "ARS",
-                      minimumFractionDigits: 2,
-                    }).format(
-                      form
-                        .watch("items")
-                        .reduce((sum, item) => sum + item.total_price, 0) +
-                        (form.watch("shipping_cost") || 0)
-                    )}
-                  </p>
-                </div>
-              </div>
-
               {/* Botón de Guardar */}
               <DialogFooter>
                 <Button type="submit" disabled={isLoading}>
