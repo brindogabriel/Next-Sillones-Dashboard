@@ -167,20 +167,19 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
       });
     }
   }
-
   async function fetchMaterialsBySofa(sofaId: string): Promise<Material[]> {
     try {
       const { data, error } = await supabase
         .from("sofa_materials")
         .select(
           `
-        material_id, 
-        materials (
-          name, 
-          type, 
-          cost
-        )
-      `
+      material_id, 
+      materials (
+        name, 
+        type, 
+        cost
+      )
+    `
         )
         .eq("sofa_id", sofaId);
 
@@ -188,17 +187,13 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
 
       if (!data) return [];
 
-      // Type the response data explicitly
-      interface SofaMaterialResponse {
-        material_id: string;
-        materials: {
-          name: string;
-          type?: string;
-          cost?: number;
-        }[];
-      }
-      const relatedMaterials = data.map((item: SofaMaterialResponse) => {
-        const material = item.materials;
+      const relatedMaterials = data.map((item) => {
+        // The issue is here. In Vercel, materials is probably coming back as an array
+        // Get the first element if it's an array, otherwise use it directly
+        const material = Array.isArray(item.materials)
+          ? item.materials[0]
+          : item.materials;
+
         return {
           id: item.material_id,
           name: material?.name || "Material desconocido",

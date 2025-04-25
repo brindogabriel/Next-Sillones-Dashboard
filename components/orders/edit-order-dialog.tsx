@@ -146,7 +146,11 @@ export function EditOrderDialog({
       if (!data) return [];
 
       const relatedMaterials = data.map((item: any) => {
-        const material = item.materials?.[0]; // 🔥 agarramos el primero si es array
+        // Fix the access to materials - handle both array and direct object
+        const material = Array.isArray(item.materials)
+          ? item.materials[0]
+          : item.materials;
+
         return {
           id: item.material_id,
           name: material?.name || "Material desconocido",
@@ -154,6 +158,8 @@ export function EditOrderDialog({
           cost: material?.cost || 0,
         };
       });
+
+      return relatedMaterials; // This return was missing!
     } catch (error) {
       console.error(error);
       return [];
