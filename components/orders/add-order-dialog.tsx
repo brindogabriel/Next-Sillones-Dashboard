@@ -549,7 +549,11 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                         type="number"
                         step="0.01"
                         {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
+                        onChange={(e) => {
+                          const value =
+                            e.target.value === "" ? 0 : Number(e.target.value);
+                          field.onChange(value);
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
