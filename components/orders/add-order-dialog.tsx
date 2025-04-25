@@ -102,7 +102,7 @@ interface AddOrderDialogProps {
 export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [sofaModels, setSofaModels] = useState<SofaModel[]>([]);
-  const [materials, setMaterials] = useState<Material[]>([]);
+  const [materialsPorItem, setMaterialsPorItem] = useState<Material[][]>([]);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -140,6 +140,17 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
       fetchSofaModels();
     }
   }, [open]);
+
+  useEffect(() => {
+    if (fields.length !== materialsPorItem.length) {
+      setMaterialsPorItem((prev) => {
+        const nuevo = [...prev];
+        while (nuevo.length < fields.length) nuevo.push([]);
+        while (nuevo.length > fields.length) nuevo.pop();
+        return nuevo;
+      });
+    }
+  }, [fields.length]);
 
   async function fetchSofaModels() {
     try {
@@ -197,6 +208,7 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
     const sofaModel = sofaModels.find((model) => model.id === sofaId);
     if (!sofaModel) return;
 
+    const materials = materialsPorItem[index] || [];
     const materialCost = selectedMaterialIds
       .map((id) => materials.find((m) => m.id === id)?.cost || 0)
       .reduce((sum, cost) => sum + cost, 0);
@@ -212,15 +224,16 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
     const fetchedMaterials = await fetchMaterialsBySofa(sofaId);
     const materialIds = fetchedMaterials.map((m) => m.id);
 
-    // Actualiza los materiales en el estado local
-    setMaterials(fetchedMaterials);
+    setMaterialsPorItem((prev) => {
+      const nuevo = [...prev];
+      nuevo[index] = fetchedMaterials;
+      return nuevo;
+    });
 
-    // Actualiza los materiales seleccionados en el formulario
     form.setValue(`items.${index}.selected_materials`, materialIds, {
       shouldValidate: true,
     });
 
-    // Actualiza precios inmediatamente
     updateItemPrices(
       index,
       sofaId,
@@ -234,10 +247,7 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
     const selectedMaterials = form.getValues(
       `items.${index}.selected_materials`
     );
-
-    if (sofaId) {
-      updateItemPrices(index, sofaId, value, selectedMaterials);
-    }
+    updateItemPrices(index, sofaId, value, selectedMaterials);
   };
 
   const toggleMaterial = (index: number, materialId: string) => {
@@ -249,7 +259,6 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
       : [...currentMaterials, materialId];
 
     form.setValue(`items.${index}.selected_materials`, newMaterials);
-
     updateItemPrices(
       index,
       form.getValues(`items.${index}.sofa_id`),
@@ -262,8 +271,11 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
     const currentMaterials = form.getValues(
       `items.${index}.selected_materials`
     );
-    const allSelected = currentMaterials.length === materials.length;
-    const newMaterials = allSelected ? [] : materials.map((m) => m.id);
+    const allSelected =
+      currentMaterials.length === materialsPorItem[index].length;
+    const newMaterials = allSelected
+      ? []
+      : materialsPorItem[index].map((m) => m.id);
 
     form.setValue(`items.${index}.selected_materials`, newMaterials);
 
@@ -657,14 +669,17 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                       </div>
                       <div>
                         <h3 className="text-lg font-medium mb-2">Materiales</h3>
-                        {materials.length > 0 ? (
+                        {materialsPorItem[index] &&
+                        materialsPorItem[index].length > 0 ? (
                           <MultiSelect
-                            options={materials.map((material) => ({
-                              value: material.id,
-                              name: material.name,
-                              type: material.type,
-                              cost: material.cost,
-                            }))}
+                            options={materialsPorItem[index].map(
+                              (material) => ({
+                                value: material.id,
+                                name: material.name,
+                                type: material.type,
+                                cost: material.cost,
+                              })
+                            )}
                             selected={form.getValues(
                               `items.${index}.selected_materials`
                             )}
@@ -736,7 +751,8 @@ export function AddOrderDialog({ open, onOpenChange }: AddOrderDialogProps) {
                       currency: "ARS",
                       minimumFractionDigits: 2,
                     }).format(
-                      form.watch("items").reduce((sum, item) => {
+                      form.watch("items").reduce((sum, item, idx) => {
+                        const materials = materialsPorItem[idx] || [];
                         const materialCost =
                           item.selected_materials
                             .map(
