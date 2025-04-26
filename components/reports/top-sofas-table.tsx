@@ -34,18 +34,17 @@ export function TopSofasTable() {
           .from("order_items")
           .select(
             `
-            quantity,
-            total_price,
-            sofa_models (
-              name
-            ),
-            orders (
-              status
-            )
-          `
+    quantity,
+    total_price,
+    sofa_models (
+      name
+    ),
+    orders (
+      status
+    )
+  `
           )
-          .eq("orders.status", "completed")
-          .as("OrderItem[]");
+          .eq("orders.status", "completed");
 
         if (error) throw error;
 
