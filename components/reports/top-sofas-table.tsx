@@ -41,17 +41,17 @@ export function TopSofasTable() {
       try {
         const { data: orderItems, error } = await supabase
           .from("order_items")
-          .select<OrderItem>(
+          .select(
             `
-            quantity,
-            total_price,
-            sofa_models (
-              name
-            ),
-            orders (
-              status
-            )
-          `
+    quantity,
+    total_price,
+    sofa_models (
+      name
+    ),
+    orders (
+      status
+    )
+  `
           )
           .eq("orders.status", "completed");
 
