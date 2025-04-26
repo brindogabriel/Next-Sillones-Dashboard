@@ -1,25 +1,39 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+interface OrderItem {
+  quantity: number;
+  total_price: number;
+  sofa_models: { name: string } | { name: string }[] | null;
+}
 
 interface TopSofa {
-  name: string
-  quantity: number
-  total_sales: number
+  name: string;
+  quantity: number;
+  total_sales: number;
 }
 
 export function TopSofasTable() {
-  const [data, setData] = useState<TopSofa[]>([])
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<TopSofa[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchTopSofas() {
       try {
         const { data: orderItems, error } = await supabase
           .from("order_items")
-          .select(`
+          .select(
+            `
             quantity,
             total_price,
             sofa_models (
@@ -28,23 +42,30 @@ export function TopSofasTable() {
             orders (
               status
             )
-          `)
+          `
+          )
           .eq("orders.status", "completed")
+          .as("OrderItem[]");
 
-        if (error) throw error
+        if (error) throw error;
 
         // Group by sofa model
-        const sofaData: Record<string, { quantity: number; total_sales: number }> = {}
+        const sofaData: Record<
+          string,
+          { quantity: number; total_sales: number }
+        > = {};
 
         // Sum quantities and sales by sofa model
         orderItems?.forEach((item) => {
-          const sofaName = item.sofa_models.name
+          const sofaName = Array.isArray(item.sofa_models)
+            ? item.sofa_models[0]?.name
+            : item.sofa_models?.name;
           if (!sofaData[sofaName]) {
-            sofaData[sofaName] = { quantity: 0, total_sales: 0 }
+            sofaData[sofaName] = { quantity: 0, total_sales: 0 };
           }
-          sofaData[sofaName].quantity += item.quantity
-          sofaData[sofaName].total_sales += item.total_price
-        })
+          sofaData[sofaName].quantity += item.quantity;
+          sofaData[sofaName].total_sales += item.total_price;
+        });
 
         // Convert to array for table
         const tableData = Object.entries(sofaData)
@@ -54,21 +75,21 @@ export function TopSofasTable() {
             total_sales,
           }))
           .sort((a, b) => b.quantity - a.quantity)
-          .slice(0, 10) // Top 10 sofas
+          .slice(0, 10); // Top 10 sofas
 
-        setData(tableData)
+        setData(tableData);
       } catch (error) {
-        console.error("Error fetching top sofas:", error)
+        console.error("Error fetching top sofas:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchTopSofas()
-  }, [])
+    fetchTopSofas();
+  }, []);
 
   if (loading) {
-    return <div>Cargando datos de modelos...</div>
+    return <div>Cargando datos de modelos...</div>;
   }
 
   return (
@@ -105,5 +126,5 @@ export function TopSofasTable() {
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }
