@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/lib/supabase";
-import { MultiSelect } from "./MultiSelect"; // Asegurate que este import esté bien
+import { MultiSelect } from "./MultiSelect";
 import {
   Select,
   SelectContent,
@@ -34,7 +34,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Order } from "./columns";
+// Update the Order interface to include items property
+interface OrderItem {
+  sofa_id: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  selected_materials?: string[];
+}
+
+// Extend the imported Order type with our items property
+interface Order {
+  id: string;
+  customer_name: string;
+  customer_phone: string | null;
+  customer_email: string | null;
+  status: string;
+  notes: string | null;
+  items?: OrderItem[];
+  // Add any other properties that might be in your original Order type
+}
 
 interface Material {
   id: string;
@@ -84,7 +103,7 @@ export function EditOrderDialog({
       customer_email: order.customer_email || "",
       status: order.status,
       notes: order.notes || "",
-      items: (order.items ?? []).map((item) => ({
+      items: (order.items || []).map((item) => ({
         sofa_id: item.sofa_id,
         quantity: item.quantity,
         unit_price: item.unit_price,
@@ -102,8 +121,23 @@ export function EditOrderDialog({
   useEffect(() => {
     if (open) {
       fetchSofaModels();
+
+      // Pre-load materials for each existing item
+      if (order.items && order.items.length > 0) {
+        order.items.forEach((item, index) => {
+          if (item.sofa_id) {
+            fetchMaterialsBySofa(item.sofa_id).then((materials) => {
+              setMaterialsPorItem((prev) => {
+                const updated = [...prev];
+                updated[index] = materials;
+                return updated;
+              });
+            });
+          }
+        });
+      }
     }
-  }, [open]);
+  }, [open, order.items]);
 
   useEffect(() => {
     if (fields.length !== materialsPorItem.length) {
@@ -134,7 +168,7 @@ export function EditOrderDialog({
     }
   }
 
-  async function fetchMaterialsBySofa(sofaId: string) {
+  async function fetchMaterialsBySofa(sofaId: string): Promise<Material[]> {
     try {
       const { data, error } = await supabase
         .from("sofa_materials")
@@ -146,7 +180,7 @@ export function EditOrderDialog({
       if (!data) return [];
 
       const relatedMaterials = data.map((item: any) => {
-        // Fix the access to materials - handle both array and direct object
+        // Handle both array and object formats for materials
         const material = Array.isArray(item.materials)
           ? item.materials[0]
           : item.materials;
@@ -159,7 +193,7 @@ export function EditOrderDialog({
         };
       });
 
-      return relatedMaterials; // This return was missing!
+      return relatedMaterials;
     } catch (error) {
       console.error(error);
       return [];
@@ -202,6 +236,31 @@ export function EditOrderDialog({
       sofaId,
       form.getValues(`items.${index}.quantity`),
       []
+    );
+  };
+
+  const handleQuantityChange = (index: number, value: number) => {
+    const sofaId = form.getValues(`items.${index}.sofa_id`);
+    const selectedMaterials = form.getValues(
+      `items.${index}.selected_materials`
+    );
+    updateItemPrices(index, sofaId, value, selectedMaterials);
+  };
+
+  const toggleMaterial = (index: number, materialId: string) => {
+    const currentMaterials = form.getValues(
+      `items.${index}.selected_materials`
+    );
+    const newMaterials = currentMaterials.includes(materialId)
+      ? currentMaterials.filter((id) => id !== materialId)
+      : [...currentMaterials, materialId];
+
+    form.setValue(`items.${index}.selected_materials`, newMaterials);
+    updateItemPrices(
+      index,
+      form.getValues(`items.${index}.sofa_id`),
+      form.getValues(`items.${index}.quantity`),
+      newMaterials
     );
   };
 
@@ -311,6 +370,8 @@ export function EditOrderDialog({
                         <SelectItem value="pending">Pendiente</SelectItem>
                         <SelectItem value="in_progress">En Progreso</SelectItem>
                         <SelectItem value="completed">Completado</SelectItem>
+                        <SelectItem value="delivered">Entregado</SelectItem>
+                        <SelectItem value="stock">En Stock</SelectItem>
                         <SelectItem value="cancelled">Cancelado</SelectItem>
                       </SelectContent>
                     </Select>
@@ -337,50 +398,97 @@ export function EditOrderDialog({
             <div className="space-y-4">
               {fields.map((field, index) => (
                 <div key={field.id} className="p-4 border rounded-md space-y-4">
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.sofa_id`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Modelo</FormLabel>
-                        <Select
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            handleSofaChange(index, value);
-                          }}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona un modelo" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {sofaModels.map((model) => (
-                              <SelectItem key={model.id} value={model.id}>
-                                {model.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name={`items.${index}.sofa_id`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Modelo</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              handleSofaChange(index, value);
+                            }}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona un modelo" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {sofaModels.map((model) => (
+                                <SelectItem key={model.id} value={model.id}>
+                                  {model.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <MultiSelect
-                    options={materialsPorItem[index] || []}
-                    selected={form.getValues(
-                      `items.${index}.selected_materials`
+                    <FormField
+                      control={form.control}
+                      name={`items.${index}.quantity`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cantidad</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              {...field}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value) || 1;
+                                field.onChange(value);
+                                handleQuantityChange(index, value);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <FormLabel>Materiales</FormLabel>
+                    {materialsPorItem[index] &&
+                    materialsPorItem[index].length > 0 ? (
+                      <MultiSelect
+                        options={materialsPorItem[index].map((material) => ({
+                          value: material.id,
+                          name: material.name,
+                          type: material.type,
+                          cost: material.cost,
+                        }))}
+                        selected={form.getValues(
+                          `items.${index}.selected_materials`
+                        )}
+                        onChange={(selected) => {
+                          form.setValue(
+                            `items.${index}.selected_materials`,
+                            selected
+                          );
+                          updateItemPrices(
+                            index,
+                            form.getValues(`items.${index}.sofa_id`),
+                            form.getValues(`items.${index}.quantity`),
+                            selected
+                          );
+                        }}
+                        placeholder="Selecciona materiales..."
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Selecciona un modelo de sillón para ver los materiales
+                        disponibles
+                      </p>
                     )}
-                    onChange={(selected) =>
-                      form.setValue(
-                        `items.${index}.selected_materials`,
-                        selected
-                      )
-                    }
-                    placeholder="Selecciona materiales..."
-                  />
+                  </div>
                 </div>
               ))}
             </div>
