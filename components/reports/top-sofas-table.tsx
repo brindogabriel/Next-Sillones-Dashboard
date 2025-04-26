@@ -11,10 +11,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+interface SofaModel {
+  name: string;
+}
+
+interface Order {
+  status: string;
+}
+
 interface OrderItem {
   quantity: number;
   total_price: number;
-  sofa_models: { name: string } | { name: string }[] | null;
+  sofa_models: SofaModel | SofaModel[] | null;
+  orders: Order;
 }
 
 interface TopSofa {
@@ -32,17 +41,17 @@ export function TopSofasTable() {
       try {
         const { data: orderItems, error } = await supabase
           .from("order_items")
-          .select(
+          .select<OrderItem>(
             `
-    quantity,
-    total_price,
-    sofa_models (
-      name
-    ),
-    orders (
-      status
-    )
-  `
+            quantity,
+            total_price,
+            sofa_models (
+              name
+            ),
+            orders (
+              status
+            )
+          `
           )
           .eq("orders.status", "completed");
 
@@ -56,14 +65,21 @@ export function TopSofasTable() {
 
         // Sum quantities and sales by sofa model
         orderItems?.forEach((item) => {
-          const sofaName = Array.isArray(item.sofa_models)
-            ? item.sofa_models[0]?.name
-            : item.sofa_models?.name;
-          if (!sofaData[sofaName]) {
-            sofaData[sofaName] = { quantity: 0, total_sales: 0 };
+          let sofaName: string | null = null;
+
+          if (Array.isArray(item.sofa_models)) {
+            sofaName = item.sofa_models[0]?.name ?? null;
+          } else {
+            sofaName = item.sofa_models?.name ?? null;
           }
-          sofaData[sofaName].quantity += item.quantity;
-          sofaData[sofaName].total_sales += item.total_price;
+
+          if (sofaName) {
+            if (!sofaData[sofaName]) {
+              sofaData[sofaName] = { quantity: 0, total_sales: 0 };
+            }
+            sofaData[sofaName].quantity += item.quantity;
+            sofaData[sofaName].total_sales += item.total_price;
+          }
         });
 
         // Convert to array for table
