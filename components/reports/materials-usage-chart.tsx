@@ -16,6 +16,11 @@ interface MaterialUsage {
   value: number;
 }
 
+interface SofaMaterial {
+  quantity: number;
+  materials: { name: string } | { name: string }[] | null;
+}
+
 const COLORS = [
   "#8B4513",
   "#A0522D",
@@ -34,14 +39,14 @@ export function MaterialsUsageChart() {
   useEffect(() => {
     async function fetchMaterialsData() {
       try {
-        const { data: sofaMaterials, error } = await supabase.from(
+        const { data: sofaMaterials, error } = (await supabase.from(
           "sofa_materials"
         ).select(`
             quantity,
             materials (
               name
             )
-          `);
+          `)) as unknown as { data: SofaMaterial[]; error: any };
 
         if (error) throw error;
 
@@ -50,9 +55,15 @@ export function MaterialsUsageChart() {
 
         // Sum usage by material
         sofaMaterials?.forEach((item) => {
-          const materialName = item.materials.name;
-          materialUsage[materialName] =
-            (materialUsage[materialName] || 0) + item.quantity;
+          // Verificar si materials es un arreglo y acceder al primer elemento si es así
+          const materialName = Array.isArray(item.materials)
+            ? item.materials[0]?.name
+            : item.materials?.name;
+
+          if (materialName) {
+            materialUsage[materialName] =
+              (materialUsage[materialName] || 0) + item.quantity;
+          }
         });
 
         // Convert to array for chart
