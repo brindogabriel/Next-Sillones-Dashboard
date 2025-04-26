@@ -39,7 +39,7 @@ export function TopSofasTable() {
   useEffect(() => {
     async function fetchTopSofas() {
       try {
-        const { data: orderItems, error } = await supabase
+        const { data: orderItems, error } = (await supabase
           .from("order_items")
           .select(
             `
@@ -53,7 +53,10 @@ export function TopSofasTable() {
     )
   `
           )
-          .eq("orders.status", "completed");
+          .eq("orders.status", "completed")) as unknown as {
+          data: OrderItem[];
+          error: any;
+        };
 
         if (error) throw error;
 
